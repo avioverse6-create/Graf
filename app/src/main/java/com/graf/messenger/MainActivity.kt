@@ -39,16 +39,6 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.styropyr0.prismal.PrismalBackdrop
-import com.styropyr0.prismal.PrismalGlass
-import com.styropyr0.prismal.PrismalGlassPipeline
-import com.styropyr0.prismal.PrismalGlassSurface
-import com.styropyr0.prismal.components.LocalPrismalBottomTabHighlightedIndex
-import com.styropyr0.prismal.components.PrismalGlassBottomTab
-import com.styropyr0.prismal.components.PrismalGlassBottomTabs
-import com.styropyr0.prismal.shapes.PrismalRoundedRectangle
-import com.styropyr0.prismal.sources.prismalGlassLayer
-import com.styropyr0.prismal.sources.rememberPrismalGlassLayer
 
 private val Ink = Color(0xFF10131B)
 private val Muted = Color(0xFF7D8493)
@@ -57,8 +47,6 @@ private val Blue = Color(0xFF1688FF)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        // Use the stable RenderEffect path on Android 13+ while AGSL device compatibility is validated.
-        PrismalGlass.pipelineOverride = PrismalGlassPipeline.Legacy
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         window.decorView.systemUiVisibility =
@@ -84,7 +72,6 @@ private fun GrafApp() {
     var selectedTab by remember { mutableIntStateOf(0) }
     var channelOpen by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
-    val backdrop = rememberPrismalGlassLayer()
 
     val background = if (dark) {
         Brush.linearGradient(listOf(Color(0xFF080D19), Color(0xFF182B43), Color(0xFF111522)))
@@ -95,8 +82,7 @@ private fun GrafApp() {
     val secondary = if (dark) Color(0xFFB5C0D0) else Muted
 
     Box(Modifier.fillMaxSize().background(background)) {
-        Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop)) {
-            Column(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
                 Spacer(Modifier.height(48.dp))
                 AnimatedContent(
                     targetState = channelOpen,
@@ -104,37 +90,36 @@ private fun GrafApp() {
                     label = "graf-screen"
                 ) { inChannel ->
                     if (inChannel) {
-                        ChannelScreen(backdrop, dark, foreground, secondary) { channelOpen = false }
+                        ChannelScreen(dark, foreground, secondary) { channelOpen = false }
                     } else {
                         when (GrafTab.entries[selectedTab]) {
-                            GrafTab.Home -> HomeScreen(backdrop, dark, foreground, secondary) { channelOpen = true }
+                            GrafTab.Home -> HomeScreen(dark, foreground, secondary) { channelOpen = true }
                             GrafTab.Contact -> SimpleScreen("Contacts", "Your people will appear here.", Icons.Rounded.Contacts, foreground, secondary)
                             GrafTab.Settings -> SettingsScreen(dark, foreground, secondary) {
                                 dark = it
                                 prefs.edit().putBoolean("dark_theme", it).apply()
                             }
-                            GrafTab.Search -> SearchScreen(backdrop, query, { query = it }, dark, foreground, secondary) {
+                            GrafTab.Search -> SearchScreen(query, { query = it }, dark, foreground, secondary) {
                                 channelOpen = true
                             }
                         }
                     }
                 }
             }
-        }
 
         if (!channelOpen) {
-            PrismalGlassBottomTabs(
-                selectedTabIndex = { selectedTab },
-                onTabSelected = { selectedTab = it },
-                backdrop = backdrop,
-                tabsCount = 4,
-                tintDropletContent = false,
+            Row(
                 modifier = Modifier.align(Alignment.BottomCenter)
                     .padding(start = 18.dp, end = 18.dp, bottom = 22.dp)
                     .fillMaxWidth()
+                    .clip(CircleShape)
+                    .background(if (dark) Color(0xFF202A3A) else Color(0xFFF9F8FA))
+                    .padding(vertical = 9.dp),
+                horizontalArrangement = Arrangement.SpaceEvenly,
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 GrafTab.entries.forEachIndexed { index, tab ->
-                    GrafBottomTab(index, tab, selectedTab) { selectedTab = index }
+                    GrafBottomTab(tab, selectedTab == index) { selectedTab = index }
                 }
             }
         }
@@ -142,12 +127,14 @@ private fun GrafApp() {
 }
 
 @Composable
-private fun RowScope.GrafBottomTab(index: Int, tab: GrafTab, selected: Int, onClick: () -> Unit) {
-    val highlighted = LocalPrismalBottomTabHighlightedIndex.current()
-    val active = if (highlighted >= 0) highlighted == index else selected == index
-    PrismalGlassBottomTab(onClick = onClick) {
-        GrafIcon(tab.icon, tab.title, if (active) Blue else Color(0xFF303744), 22.dp)
-        Text(tab.title, color = if (active) Blue else Color(0xFF303744), fontSize = 11.sp)
+private fun GrafBottomTab(tab: GrafTab, active: Boolean, onClick: () -> Unit) {
+    Column(
+        modifier = Modifier.clip(CircleShape).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 3.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.spacedBy(3.dp)
+    ) {
+        GrafIcon(tab.icon, tab.title, if (active) Blue else Color(0xFF697386), 22.dp)
+        Text(tab.title, color = if (active) Blue else Color(0xFF697386), fontSize = 11.sp)
     }
 }
 
@@ -171,12 +158,12 @@ private fun Header(title: String, subtitle: String? = null, foreground: Color, a
 }
 
 @Composable
-private fun HomeScreen(backdrop: PrismalBackdrop, dark: Boolean, foreground: Color, secondary: Color, onOpenChannel: () -> Unit) {
+private fun HomeScreen(dark: Boolean, foreground: Color, secondary: Color, onOpenChannel: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Header("Graf", "Your conversations", foreground) {
             GlassIconButton(Icons.Rounded.Tune, dark, onClick = {})
         }
-        GlassPanel(backdrop, dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+        GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
             Row(Modifier.fillMaxWidth().clickable(onClick = onOpenChannel).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 ChannelAvatar()
                 Spacer(Modifier.width(13.dp))
@@ -195,7 +182,7 @@ private fun HomeScreen(backdrop: PrismalBackdrop, dark: Boolean, foreground: Col
         Spacer(Modifier.height(22.dp))
         Text("CHANNELS", color = secondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
-        GlassPanel(backdrop, dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+        GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
             Row(Modifier.fillMaxWidth().clickable(onClick = onOpenChannel).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 ChannelAvatar()
                 Spacer(Modifier.width(12.dp))
@@ -210,7 +197,7 @@ private fun HomeScreen(backdrop: PrismalBackdrop, dark: Boolean, foreground: Col
 }
 
 @Composable
-private fun ChannelScreen(backdrop: PrismalBackdrop, dark: Boolean, foreground: Color, secondary: Color, onBack: () -> Unit) {
+private fun ChannelScreen(dark: Boolean, foreground: Color, secondary: Color, onBack: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             GlassIconButton(Icons.Rounded.ArrowBack, dark, onBack)
@@ -225,7 +212,7 @@ private fun ChannelScreen(backdrop: PrismalBackdrop, dark: Boolean, foreground: 
         }
         Spacer(Modifier.height(12.dp))
         Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.TopCenter) {
-            GlassPanel(backdrop, dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+            GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
                 Column(Modifier.padding(18.dp)) {
                     Text("GRAF", color = Blue, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 2.sp)
                     Spacer(Modifier.height(10.dp))
@@ -244,7 +231,7 @@ private fun ChannelScreen(backdrop: PrismalBackdrop, dark: Boolean, foreground: 
                 }
             }
         }
-        GlassPanel(backdrop, dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp)) {
+        GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 15.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text("Публикации доступны только администраторам", color = secondary, fontSize = 12.sp, modifier = Modifier.weight(1f))
                 GrafIcon(Icons.Rounded.Notifications, "Notifications", Blue, 21.dp)
@@ -273,11 +260,11 @@ private fun SettingsScreen(dark: Boolean, foreground: Color, secondary: Color, o
 }
 
 @Composable
-private fun SearchScreen(backdrop: PrismalBackdrop, query: String, onQueryChange: (String) -> Unit, dark: Boolean,
+private fun SearchScreen(query: String, onQueryChange: (String) -> Unit, dark: Boolean,
                          foreground: Color, secondary: Color, onOpenChannel: () -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Header("Search", "Find channels and messages", foreground)
-        GlassPanel(backdrop, dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
+        GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
             Row(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
                 GrafIcon(Icons.Rounded.Search, "Search", secondary, 21.dp)
                 Spacer(Modifier.width(10.dp))
@@ -295,7 +282,7 @@ private fun SearchScreen(backdrop: PrismalBackdrop, query: String, onQueryChange
             }
         }
         if ("graf".contains(query.trim(), ignoreCase = true) || query.isBlank()) {
-            GlassPanel(backdrop, dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp)) {
+            GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 14.dp)) {
                 Row(Modifier.fillMaxWidth().clickable(onClick = onOpenChannel).padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                     ChannelAvatar()
                     Spacer(Modifier.width(12.dp))
@@ -324,17 +311,13 @@ private fun SimpleScreen(title: String, message: String, icon: ImageVector, fore
 }
 
 @Composable
-private fun GlassPanel(backdrop: PrismalBackdrop, dark: Boolean, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    PrismalGlassSurface(
-        backdrop = backdrop,
-        shape = { PrismalRoundedRectangle(24.dp) },
-        tint = if (dark) Color(0xFF182438) else Color(0xFFF7F4F4),
-        tintAlpha = if (dark) .24f else .20f,
-        blurRadius = 10.dp,
+private fun GlassPanel(dark: Boolean, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Column(
         modifier = modifier
-    ) {
-        Column(content = content)
-    }
+            .clip(androidx.compose.foundation.shape.RoundedCornerShape(24.dp))
+            .background(if (dark) Color(0xFF253247).copy(alpha = .94f) else Color(0xFFF9F8FA).copy(alpha = .88f)),
+        content = content
+    )
 }
 
 @Composable
