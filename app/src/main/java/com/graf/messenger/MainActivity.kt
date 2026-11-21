@@ -275,51 +275,37 @@ private fun ChatsScreen(
     )
     val editTint = if (dark) Color(0xFF9BCBFF).copy(alpha = .24f) else Color(0xFF80BFFF).copy(alpha = .42f)
     val neutralTint = if (dark) Color.White.copy(alpha = .10f) else Color.White.copy(alpha = .36f)
+    val outline = if (dark) Color.White.copy(alpha = .20f) else Color.Black.copy(alpha = .10f)
 
     Column(Modifier.fillMaxSize()) {
         Row(
             Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            PrismalGlassButton(
-                onClick = { },
-                backdrop = backdrop,
-                modifier = Modifier.size(48.dp),
-                height = null,
-                shape = { CircleShape },
-                tint = editTint,
-                contentPadding = PaddingValues(0.dp),
-                horizontalArrangement = Arrangement.Center
+            Box(
+                Modifier.size(48.dp).clip(CircleShape).background(editTint)
+                    .border(1.dp, outline, CircleShape).clickable { },
+                contentAlignment = Alignment.Center
             ) {
                 GrafIcon(GrafEditIcon, "Редактировать", if (dark) Color(0xFFB9DCFF) else Color(0xFF267FCB), 21.dp)
             }
             Spacer(Modifier.weight(1f))
             Text("Чаты", color = foreground, fontSize = 22.sp, fontWeight = FontWeight.W900)
             Spacer(Modifier.weight(1f))
-            PrismalGlassButton(
-                onClick = { },
-                backdrop = backdrop,
-                modifier = Modifier.size(48.dp),
-                height = null,
-                shape = { CircleShape },
-                tint = neutralTint,
-                contentPadding = PaddingValues(0.dp),
-                horizontalArrangement = Arrangement.Center
+            Box(
+                Modifier.size(48.dp).clip(CircleShape).background(neutralTint)
+                    .border(1.dp, outline, CircleShape).clickable { },
+                contentAlignment = Alignment.Center
             ) {
                 GrafIcon(Icons.Rounded.Add, "Добавить", foreground, 25.dp)
             }
         }
 
-        PrismalGlassButton(
-            onClick = { },
-            backdrop = backdrop,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 9.dp),
-            height = 50.dp,
-            tint = if (dark) Color.White.copy(alpha = .07f) else Color.White.copy(alpha = .38f),
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.Start
-        ) {
-            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 9.dp)) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
                 GrafIcon(Icons.Rounded.Search, "Поиск", secondary, 21.dp)
                 Spacer(Modifier.width(10.dp))
                 BasicTextField(
