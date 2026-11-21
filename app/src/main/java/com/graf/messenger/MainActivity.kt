@@ -39,6 +39,13 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.styropyr0.prismal.PrismalGlass
+import com.styropyr0.prismal.PrismalGlassPipeline
+import com.styropyr0.prismal.components.LocalPrismalBottomTabHighlightedIndex
+import com.styropyr0.prismal.components.PrismalGlassBottomTab
+import com.styropyr0.prismal.components.PrismalGlassBottomTabs
+import com.styropyr0.prismal.sources.prismalGlassLayer
+import com.styropyr0.prismal.sources.rememberPrismalGlassLayer
 
 private val Ink = Color(0xFF10131B)
 private val Muted = Color(0xFF7D8493)
@@ -47,6 +54,7 @@ private val Blue = Color(0xFF1688FF)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        PrismalGlass.pipelineOverride = PrismalGlassPipeline.Legacy
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         window.decorView.systemUiVisibility =
@@ -72,6 +80,7 @@ private fun GrafApp() {
     var selectedTab by remember { mutableIntStateOf(0) }
     var channelOpen by remember { mutableStateOf(false) }
     var query by remember { mutableStateOf("") }
+    val backdrop = rememberPrismalGlassLayer()
 
     val background = if (dark) {
         Brush.linearGradient(listOf(Color(0xFF080D19), Color(0xFF182B43), Color(0xFF111522)))
@@ -82,6 +91,7 @@ private fun GrafApp() {
     val secondary = if (dark) Color(0xFFB5C0D0) else Muted
 
     Box(Modifier.fillMaxSize().background(background)) {
+      Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop)) {
         Column(Modifier.fillMaxSize()) {
                 Spacer(Modifier.height(48.dp))
                 AnimatedContent(
@@ -106,20 +116,21 @@ private fun GrafApp() {
                     }
                 }
             }
+      }
 
         if (!channelOpen) {
-            Row(
+            PrismalGlassBottomTabs(
+                selectedTabIndex = { selectedTab },
+                onTabSelected = { selectedTab = it },
+                backdrop = backdrop,
+                tabsCount = GrafTab.entries.size,
+                tintDropletContent = false,
                 modifier = Modifier.align(Alignment.BottomCenter)
                     .padding(start = 18.dp, end = 18.dp, bottom = 22.dp)
                     .fillMaxWidth()
-                    .clip(CircleShape)
-                    .background(if (dark) Color(0xFF202A3A) else Color(0xFFF9F8FA))
-                    .padding(vertical = 9.dp),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically
             ) {
                 GrafTab.entries.forEachIndexed { index, tab ->
-                    GrafBottomTab(tab, selectedTab == index) { selectedTab = index }
+                    GrafBottomTab(index, tab, selectedTab) { selectedTab = index }
                 }
             }
         }
@@ -127,14 +138,12 @@ private fun GrafApp() {
 }
 
 @Composable
-private fun GrafBottomTab(tab: GrafTab, active: Boolean, onClick: () -> Unit) {
-    Column(
-        modifier = Modifier.clip(CircleShape).clickable(onClick = onClick).padding(horizontal = 12.dp, vertical = 3.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.spacedBy(3.dp)
-    ) {
-        GrafIcon(tab.icon, tab.title, if (active) Blue else Color(0xFF697386), 22.dp)
-        Text(tab.title, color = if (active) Blue else Color(0xFF697386), fontSize = 11.sp)
+private fun RowScope.GrafBottomTab(index: Int, tab: GrafTab, selected: Int, onClick: () -> Unit) {
+    val highlighted = LocalPrismalBottomTabHighlightedIndex.current()
+    val active = if (highlighted >= 0) highlighted == index else selected == index
+    PrismalGlassBottomTab(onClick = onClick) {
+        GrafIcon(tab.icon, tab.title, if (active) Blue else Color(0xFF303744), 22.dp)
+        Text(tab.title, color = if (active) Blue else Color(0xFF303744), fontSize = 11.sp)
     }
 }
 
