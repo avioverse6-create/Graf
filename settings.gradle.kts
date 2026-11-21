@@ -10,8 +10,17 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
-        mavenCentral()
-        maven(url = "https://jitpack.io")
+        // JitPack hosts GitHub-hosted artifacts; do not query Maven Central for them.
+        maven(url = "https://jitpack.io") {
+            content {
+                includeGroup("com.github.styropyr0.PrismalAGSL")
+            }
+        }
+        mavenCentral {
+            content {
+                excludeGroup("com.github.styropyr0.PrismalAGSL")
+            }
+        }
     }
 }
 
