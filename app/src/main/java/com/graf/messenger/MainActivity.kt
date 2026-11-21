@@ -89,7 +89,7 @@ private fun GrafApp() {
     val secondary = if (dark) Color(0xFFB5C0D0) else Muted
 
     Box(Modifier.fillMaxSize()) {
-      Box(Modifier.fillMaxSize().background(background).prismalGlassLayer(backdrop)) {
+      Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
         Column(Modifier.fillMaxSize()) {
                 Spacer(Modifier.height(48.dp))
                 AnimatedContent(
@@ -123,20 +123,14 @@ private fun GrafApp() {
                 backdrop = backdrop,
                 tabsCount = GrafTab.entries.size,
                 tintDropletContent = false,
-                blurRadius = 8.dp,
-                refractionHeight = 22.dp,
-                refractionAmount = 36.dp,
-                dropletRefractionHeight = 18.dp,
-                dropletRefractionAmount = 22.dp,
-                dropletChromaticAberration = 0.55f,
-                renderWithLowOverhead = false,
+                // Keep Prismal's tuned defaults for the complete capsule and its liquid lens.
                 modifier = Modifier.align(Alignment.BottomCenter)
                     .navigationBarsPadding()
-                    .padding(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 14.dp)
+                    .padding(horizontal = 20.dp, vertical = 8.dp)
                     .fillMaxWidth()
             ) {
                 GrafTab.entries.forEachIndexed { index, tab ->
-                    GrafBottomTab(index, tab, selectedTab) { selectedTab = index }
+                    GrafBottomTab(index, tab, selectedTab, dark) { selectedTab = index }
                 }
             }
         }
@@ -144,12 +138,12 @@ private fun GrafApp() {
 }
 
 @Composable
-private fun RowScope.GrafBottomTab(index: Int, tab: GrafTab, selected: Int, onClick: () -> Unit) {
+private fun RowScope.GrafBottomTab(index: Int, tab: GrafTab, selected: Int, dark: Boolean, onClick: () -> Unit) {
     val highlighted = LocalPrismalBottomTabHighlightedIndex.current()
     val active = if (highlighted >= 0) highlighted == index else selected == index
     PrismalGlassBottomTab(onClick = onClick) {
-        GrafIcon(tab.icon, tab.title, if (active) Blue else Color(0xFF303744), 22.dp)
-        Text(tab.title, color = if (active) Blue else Color(0xFF303744), fontSize = 11.sp)
+        GrafIcon(tab.icon, tab.title, if (active) Blue else if (dark) Color(0xFFE5ECF5) else Color(0xFF303744), 22.dp)
+        Text(tab.title, color = if (active) Blue else if (dark) Color(0xFFE5ECF5) else Color(0xFF303744), fontSize = 11.sp)
     }
 }
 
