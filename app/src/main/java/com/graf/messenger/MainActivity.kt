@@ -115,7 +115,7 @@ private fun GrafApp() {
  val context=LocalContext.current
  val prefs=remember { context.getSharedPreferences("graf_prefs",0) }
  var dark by remember { mutableStateOf(prefs.getBoolean("dark_theme",true)) }
- var selectedTab by remember { mutableIntStateOf(0) }
+ var selectedTab by remember { mutableIntStateOf(1) }
  var profileOpen by remember { mutableStateOf(false) }
  var channelOpen by remember { mutableStateOf(false) }
  var photoViewer by remember { mutableStateOf(false) }
