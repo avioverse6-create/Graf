@@ -58,7 +58,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         // Use the stable RenderEffect path on Android 13+ while AGSL device compatibility is validated.
-        PrismalGlass.pipelineOverride = PrismalGlassPipeline.Standard
+        PrismalGlass.pipelineOverride = PrismalGlassPipeline.Legacy
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         window.decorView.systemUiVisibility =
