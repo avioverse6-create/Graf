@@ -165,7 +165,7 @@ private fun GrafApp() {
    }
    if(!channelOpen) {
     PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it;profileOpen=false},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
-     modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=18.dp,vertical=8.dp).fillMaxWidth() {
+     modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=18.dp,vertical=8.dp).fillMaxWidth()) {
       GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index;profileOpen=false } }
     }
    }
@@ -338,7 +338,9 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
    GlassIconButton(Icons.Rounded.ArrowBack,dark,onBack)
    Spacer(Modifier.width(14.dp)); Text("Настройки",color=foreground,fontSize=20.sp,fontWeight=FontWeight.W900)
   }
-  SettingsGroup("АККАУНТ",foreground,secondary,fill,stroke) {\n   SettingsRow(Icons.Rounded.Person,"Мой профиль","Фото и информация профиля",foreground,secondary,onProfileClick)\n  }\n  Spacer(Modifier.height(14.dp))\n  SettingsGroup("ВНЕШНИЙ ВИД",foreground,secondary,fill,stroke) {
+  SettingsGroup("АККАУНТ",foreground,secondary,fill,stroke) {
+   SettingsRow(Icons.Rounded.Person,"Мой профиль","Фото и информация профиля",foreground,secondary,onProfileClick)
+  }\n  Spacer(Modifier.height(14.dp))\n  SettingsGroup("ВНЕШНИЙ ВИД",foreground,secondary,fill,stroke) {
    SettingsRow(Icons.Rounded.LightMode,"Светлая тема","Белое оформление",foreground,secondary) { onThemeChange(false) }
    SettingsRow(Icons.Rounded.DarkMode,"Тёмная тема","Тёмное оформление",foreground,secondary) { onThemeChange(true) }
   }
