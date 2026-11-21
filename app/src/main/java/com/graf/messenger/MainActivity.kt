@@ -97,6 +97,15 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            window.navigationBarDividerColor = android.graphics.Color.TRANSPARENT
+        }
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+            // Keep the gesture-navigation area fully transparent so chat content
+            // continues behind the Prismal glass capsule without a dark system scrim.
+            window.isNavigationBarContrastEnforced = false
+            window.isStatusBarContrastEnforced = false
+        }
         window.decorView.systemUiVisibility =
             android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                 android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
