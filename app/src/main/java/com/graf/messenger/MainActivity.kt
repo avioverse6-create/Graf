@@ -239,9 +239,14 @@ private fun GrafIcon(image: ImageVector, description: String?, tint: Color, size
         modifier = Modifier.size(size * scale).drawWithContent {
             drawContent()
             if (bold) {
-                translate(left = 0.45f) { drawContent() }
-                translate(top = 0.45f) { drawContent() }
-                translate(left = 0.45f, top = 0.45f) { drawContent() }
+                drawContext.canvas.save()
+                drawContext.canvas.translate(0.45f, 0f)
+                drawContent()
+                drawContext.canvas.restore()
+                drawContext.canvas.save()
+                drawContext.canvas.translate(0f, 0.45f)
+                drawContent()
+                drawContext.canvas.restore()
             }
         }
     )
