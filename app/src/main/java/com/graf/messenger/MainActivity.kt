@@ -1,6 +1,17 @@
 package com.graf.messenger
 
 import android.os.Bundle
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.material.icons.rounded.Add
+import androidx.compose.material.icons.rounded.Create
+import androidx.compose.material.icons.rounded.Chat
+import androidx.compose.material.icons.rounded.PersonAdd
+import androidx.compose.material.icons.rounded.Notifications
+import androidx.compose.material.icons.rounded.Circle
+
 import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -94,19 +105,18 @@ class MainActivity : ComponentActivity() {
 }
 
 private enum class GrafTab(val title: String, val icon: ImageVector) {
-    Home("Home", Icons.Rounded.Home),
-    Contact("Contact", Icons.Rounded.Contacts),
-    Settings("Profile", Icons.Rounded.Person),
-    Search("Search", Icons.Rounded.Search)
+    Contact("Контакты", Icons.Rounded.Contacts),
+    Home("Чаты", Icons.Rounded.Chat),
+    Settings("Настройки", Icons.Rounded.Settings)
 }
 
 @Composable
 private fun GrafApp() {
  val context=LocalContext.current
  val prefs=remember { context.getSharedPreferences("graf_prefs",0) }
- var dark by remember { mutableStateOf(prefs.getBoolean("dark_theme",false)) }
+ var dark by remember { mutableStateOf(prefs.getBoolean("dark_theme",true)) }
  var selectedTab by remember { mutableIntStateOf(0) }
- var settingsOpen by remember { mutableStateOf(false) }
+ var profileOpen by remember { mutableStateOf(false) }
  var channelOpen by remember { mutableStateOf(false) }
  var photoViewer by remember { mutableStateOf(false) }
  var query by remember { mutableStateOf("") }
@@ -121,7 +131,7 @@ private fun GrafApp() {
  val fontPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
   if(uri!=null) runCatching { context.contentResolver.openInputStream(uri)?.use { input -> val file=File(context.filesDir,"graf_custom_font.ttf"); FileOutputStream(file).use { input.copyTo(it) }; customFontPath=file.absolutePath; prefs.edit().putString("font_path",file.absolutePath).apply() } }
  }
- val background=if(dark) Brush.linearGradient(listOf(Color(0xFF080D19),Color(0xFF182B43),Color(0xFF111522))) else Brush.linearGradient(listOf(Color(0xFFF4D8D0),Color(0xFFA9C4D1),Color(0xFFE9DDD5)))
+ val background=if(dark) Brush.verticalGradient(listOf(Color(0xFF000000),Color(0xFF050505),Color(0xFF000000))) else Brush.verticalGradient(listOf(Color(0xFFF7F7F8),Color(0xFFE9EAED)))
  val foreground=if(dark) Color(0xFFF5F7FC) else Color(0xFF171B24)
  val secondary=if(dark) Color(0xFFB5C0D0) else Color(0xFF596273)
  val appFont=remember(customFontPath) { runCatching { customFontPath?.let { FontFamily(Font(File(it),weight=FontWeight.Normal)) } }.getOrNull() ?: FontFamily(Font(R.font.inter_variable,weight=FontWeight.W900)) }
@@ -135,28 +145,27 @@ private fun GrafApp() {
      AnimatedContent(targetState=Triple(channelOpen,selectedTab,settingsOpen),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
       when {
        state.first -> ChannelScreen(dark,foreground,secondary) { channelOpen=false }
-       state.second==2 && state.third -> SettingsScreen(dark,foreground,secondary,textScale,boldText,
-        onBack={settingsOpen=false},onThemeChange={dark=it;prefs.edit().putBoolean("dark_theme",it).apply()},
+       state.second==2 && !profileOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,
+        onBack={selectedTab=1},onProfileClick={profileOpen=true},onThemeChange={dark=it;prefs.edit().putBoolean("dark_theme",it).apply()},
         onScaleChange={textScale=it;prefs.edit().putFloat("text_scale",it).apply()},
         onBoldChange={boldText=it;prefs.edit().putBoolean("bold_text",it).apply()},
         onFontPick={fontPicker.launch(arrayOf("font/ttf","application/x-font-ttf","application/octet-stream"))},
         onFontReset={customFontPath=null;prefs.edit().remove("font_path").apply()},hasCustomFont=customFontPath!=null)
        else -> when(GrafTab.entries[state.second]) {
-        GrafTab.Home -> HomeScreen(dark,foreground,secondary) { channelOpen=true }
-        GrafTab.Contact -> SimpleScreen("Contacts","Your people will appear here.",Icons.Rounded.Contacts,foreground,secondary)
+        GrafTab.Home -> ChatsScreen(dark,foreground,secondary,query,{query=it})
+        GrafTab.Contact -> ContactsScreen(dark,foreground,secondary)
         GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,
-         onBack={selectedTab=0},onMore={settingsOpen=true},onPhoto={photoPicker.launch(arrayOf("image/*"))},
+         onBack={profileOpen=false},onMore={profileOpen=false},onPhoto={photoPicker.launch(arrayOf("image/*"))},
          onViewPhoto={if(profilePhoto!=null) photoViewer=true})
-        GrafTab.Search -> SearchScreen(query,{query=it},dark,foreground,secondary) { channelOpen=true }
        }
       }
      }
     }
    }
-   if(!channelOpen && !settingsOpen) {
-    PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
-     modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=8.dp).fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(40.dp)).background(if(dark) Color.White.copy(alpha=.07f) else Color.White.copy(alpha=.58f)).border(1.dp,if(dark) Color.White.copy(alpha=.20f) else Color.White.copy(alpha=.78f),androidx.compose.foundation.shape.RoundedCornerShape(40.dp))) {
-      GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index } }
+   if(!channelOpen) {
+    PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it;profileOpen=false},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
+     modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=18.dp,vertical=8.dp).fillMaxWidth() {
+      GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index;profileOpen=false } }
     }
    }
    if(photoViewer && profilePhoto!=null) ProfilePhotoViewer(profilePhoto!!,dark) { photoViewer=false }
@@ -193,42 +202,86 @@ private fun Header(title: String, subtitle: String? = null, foreground: Color, a
 }
 
 @Composable
-private fun HomeScreen(dark: Boolean, foreground: Color, secondary: Color, onOpenChannel: () -> Unit) {
-    Column(Modifier.fillMaxSize()) {
-        Header("Graf", "Your conversations", foreground) {
-            GlassIconButton(Icons.Rounded.Tune, dark, onClick = {})
-        }
-        GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
-            Row(Modifier.fillMaxWidth().clickable(onClick = onOpenChannel).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                ChannelAvatar()
-                Spacer(Modifier.width(13.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Graf News", color = foreground, fontSize = 17.sp, fontWeight = LocalTextStyle.current.fontWeight)
-                    Spacer(Modifier.height(4.dp))
-                    Text("Welcome to Graf. This is our first channel.", color = secondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("2:07", color = secondary, fontSize = 11.sp)
-                    Spacer(Modifier.height(8.dp))
-                    Box(Modifier.size(8.dp).clip(CircleShape).background(Blue))
-                }
-            }
-        }
-        Spacer(Modifier.height(22.dp))
-        Text("CHANNELS", color = secondary, fontSize = 11.sp, fontWeight = LocalTextStyle.current.fontWeight, letterSpacing = 1.5.sp,
-            modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
-        GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
-            Row(Modifier.fillMaxWidth().clickable(onClick = onOpenChannel).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
-                ChannelAvatar()
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text("Graf — Official Channel", color = foreground, fontWeight = LocalTextStyle.current.fontWeight, fontSize = 15.sp)
-                    Text("Tap to open the test channel", color = secondary, fontSize = 12.sp)
-                }
-                GrafIcon(Icons.Rounded.MoreHoriz, "More", secondary, 24.dp)
-            }
-        }
+private fun ChatsScreen(dark:Boolean,foreground:Color,secondary:Color,query:String,onQuery:(String)->Unit) {
+ val folders=listOf("Все","Личное","Новости","Разное","СФР")
+ val channels=listOf(
+  "РИА Новости" to "Средний возраст, в котором женщины рожают первого ребёнка...",
+  "НГС — новости Новосибирска" to "Какие малыши ищут дом. Двум котятам-подросткам...",
+  "АСТ-54 Black" to "Спасатели вытащили женщину из глубокого сугроба...",
+  "Анатолий Шарий" to "NBC News: два представителя Белого дома сообщили...",
+  "True Питер" to "Средствами РЭБ подавлен БПЛА в Волховском районе...",
+  "9to5Mac" to "Google updates Snapseed for iPhone with retro film camera",
+  "Rozetked" to "Самая большая революция LEGO за 50 лет...",
+  "Graf News" to "Новости и обновления Graf",
+  "Технологии" to "Новые устройства и разработки",
+  "Спорт сегодня" to "Главные спортивные события",
+  "Музыка дня" to "Новые релизы и подборки",
+  "Кинообзор" to "Премьеры этой недели",
+  "Путешествия" to "Идеи для новых поездок",
+  "Наука" to "Открытия и исследования",
+  "Город" to "Что происходит рядом"
+ )
+ val stories=listOf("Моя история","АСТ-54 Black","Лысый из...","Новосибирск","GradSPB")
+ var folder by remember { mutableIntStateOf(0) }
+ val panel=if(dark) Color(0xFF191919) else Color(0xFFE7E7E9)
+ Column(Modifier.fillMaxSize().padding(bottom=86.dp)) {
+  Row(Modifier.fillMaxWidth().padding(horizontal=18.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
+   Box(Modifier.clip(CircleShape).background(panel).clickable {}.padding(horizontal=17.dp,vertical=11.dp)) { Text("Изм.",color=foreground,fontSize=15.sp) }
+   Spacer(Modifier.weight(1f))
+   Text("Чаты",color=foreground,fontSize=22.sp,fontWeight=FontWeight.W900)
+   Spacer(Modifier.weight(1f))
+   Row(Modifier.clip(CircleShape).background(panel).padding(horizontal=12.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
+    GrafIcon(Icons.Rounded.Add,"Добавить",foreground,23.dp); Spacer(Modifier.width(16.dp)); GrafIcon(Icons.Rounded.Create,"Создать",foreground,22.dp)
+   }
+  }
+  Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(vertical=7.dp),horizontalArrangement=Arrangement.spacedBy(16.dp)) {
+   stories.forEachIndexed { i,name ->
+    Column(Modifier.width(78.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+     Box(Modifier.size(70.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Color(0xFFB9DAD5),Color(0xFF264C64)))).border(2.dp,Color(0xFF65BFA0),CircleShape),contentAlignment=Alignment.Center) {
+      Text(if(i==0) "+" else name.take(1),color=Color.White,fontSize=25.sp,fontWeight=FontWeight.Bold)
+     }
+     Spacer(Modifier.height(5.dp)); Text(name,color=foreground,fontSize=11.sp,maxLines=1,overflow=TextOverflow.Ellipsis)
     }
+   }
+  }
+  Row(Modifier.fillMaxWidth().padding(horizontal=18.dp,vertical=9.dp).clip(CircleShape).background(panel).padding(horizontal=16.dp,vertical=12.dp),verticalAlignment=Alignment.CenterVertically) {
+   GrafIcon(Icons.Rounded.Search,"Поиск",secondary,21.dp); Spacer(Modifier.width(10.dp))
+   BasicTextField(value=query,onValueChange=onQuery,singleLine=true,textStyle=TextStyle(color=foreground,fontSize=16.sp),decorationBox={inner->Box { if(query.isEmpty()) Text("Поиск",color=secondary,fontSize=16.sp);inner() }},modifier=Modifier.fillMaxWidth())
+  }
+  Row(Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal=18.dp,vertical=7.dp).clip(CircleShape).background(panel).padding(4.dp),horizontalArrangement=Arrangement.spacedBy(3.dp)) {
+   folders.forEachIndexed { i,name ->
+    Box(Modifier.clip(CircleShape).background(if(folder==i) (if(dark) Color(0xFF414141) else Color.White) else Color.Transparent).clickable { folder=i }.padding(horizontal=15.dp,vertical=9.dp)) {
+     Text(name,color=foreground,fontSize=13.sp)
+    }
+   }
+  }
+  LazyColumn(Modifier.fillMaxSize()) {
+   items(channels.filter { query.isBlank() || it.first.contains(query,true) || it.second.contains(query,true) }) { item ->
+    Row(Modifier.fillMaxWidth().clickable {}.padding(horizontal=17.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
+     Box(Modifier.size(62.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Color(0xFF143E79),Color(0xFF4B91B8)))),contentAlignment=Alignment.Center) {
+      Text(item.first.take(1),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
+     }
+     Spacer(Modifier.width(13.dp))
+     Column(Modifier.weight(1f)) {
+      Row(verticalAlignment=Alignment.CenterVertically) {
+       Text(item.first,color=foreground,fontSize=16.sp,fontWeight=FontWeight.W900,maxLines=1,overflow=TextOverflow.Ellipsis,modifier=Modifier.weight(1f))
+       Text("10:33",color=secondary,fontSize=11.sp)
+      }
+      Spacer(Modifier.height(4.dp))
+      Text(item.second,color=secondary,fontSize=13.sp,maxLines=2,overflow=TextOverflow.Ellipsis,lineHeight=17.sp)
+     }
+    }
+    Box(Modifier.fillMaxWidth().padding(start=92.dp).height(.5.dp).background(if(dark) Color.White.copy(alpha=.08f) else Color.Black.copy(alpha=.08f)))
+   }
+  }
+ }
+}
+@Composable
+private fun ContactsScreen(dark:Boolean,foreground:Color,secondary:Color) {
+ Column(Modifier.fillMaxSize().padding(bottom=88.dp)) {
+  Text("Контакты",color=foreground,fontSize=24.sp,fontWeight=FontWeight.W900,modifier=Modifier.padding(22.dp))
+  Text("Контакты появятся здесь",color=secondary,fontSize=14.sp,modifier=Modifier.align(Alignment.CenterHorizontally).padding(top=90.dp))
+ }
 }
 
 @Composable
@@ -276,7 +329,7 @@ private fun ChannelScreen(dark: Boolean, foreground: Color, secondary: Color, on
 }
 
 @Composable
-private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,onBack:()->Unit,onThemeChange:(Boolean)->Unit,onScaleChange:(Float)->Unit,onBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
+private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,onBack:()->Unit,onProfileClick:()->Unit,onThemeChange:(Boolean)->Unit,onScaleChange:(Float)->Unit,onBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
  val fill=if(dark) Color.White.copy(alpha=.10f) else Color.White.copy(alpha=.48f)
  val stroke=if(dark) Color.White.copy(alpha=.24f) else Color.White.copy(alpha=.78f)
  Column(Modifier.fillMaxSize().padding(horizontal=18.dp)) {
@@ -284,7 +337,7 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
    ProfileGlassIcon(Icons.Rounded.ArrowBack,dark,fill,Brush.linearGradient(listOf(stroke,stroke.copy(alpha=.3f))),onBack)
    Spacer(Modifier.width(14.dp)); Text("Настройки",color=foreground,fontSize=25.sp,fontWeight=FontWeight.W900)
   }
-  SettingsGroup("ВНЕШНИЙ ВИД",foreground,secondary,fill,stroke) {
+  SettingsGroup("АККАУНТ",foreground,secondary,fill,stroke) {\n   SettingsRow(Icons.Rounded.Person,"Мой профиль","Фото и информация профиля",foreground,secondary,onProfileClick)\n  }\n  Spacer(Modifier.height(14.dp))\n  SettingsGroup("ВНЕШНИЙ ВИД",foreground,secondary,fill,stroke) {
    SettingsRow(Icons.Rounded.LightMode,"Светлая тема","Белое оформление",foreground,secondary) { onThemeChange(false) }
    SettingsRow(Icons.Rounded.DarkMode,"Тёмная тема","Тёмное оформление",foreground,secondary) { onThemeChange(true) }
   }
