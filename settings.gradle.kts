@@ -13,12 +13,12 @@ dependencyResolutionManagement {
         // JitPack hosts GitHub-hosted artifacts; do not query Maven Central for them.
         maven(url = "https://jitpack.io") {
             content {
-                includeGroup("com.github.styropyr0.PrismalAGSL")
+                includeGroup("com.github.styropyr0")
             }
         }
         mavenCentral {
             content {
-                excludeGroup("com.github.styropyr0.PrismalAGSL")
+                excludeGroup("com.github.styropyr0")
             }
         }
     }
