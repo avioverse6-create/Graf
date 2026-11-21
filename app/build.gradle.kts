@@ -13,8 +13,8 @@ android {
         applicationId = "com.graf.messenger"
         minSdk = 25
         targetSdk = 36
-        versionCode = 4
-        versionName = "0.1.3"
+        versionCode = 5
+        versionName = "0.1.4"
     }
 
     buildFeatures { compose = true }
@@ -37,5 +37,6 @@ dependencies {
     implementation("androidx.compose.runtime:runtime")
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.material:material-icons-extended")
+    implementation("com.github.styropyr0:Prismal:v1.0.7")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
