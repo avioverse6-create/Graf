@@ -447,9 +447,10 @@ private fun GlassIconButton(icon: ImageVector, dark: Boolean, onClick: () -> Uni
 }
 
 @Composable
-private fun ProfileGlassIcon(icon:ImageVector,dark:Boolean,fill:Color,stroke:Brush,onClick:()->Unit) {
- Box(Modifier.size(50.dp).clip(CircleShape).background(fill).border(1.dp,stroke,CircleShape).clickable(onClick=onClick),contentAlignment=Alignment.Center) {
-  GrafIcon(icon,null,if(dark) Color.White else Ink,22.dp)
+private fun ProfileGlassIcon(icon:ImageVector,dark:Boolean,fill:Color,stroke:Brush,backdrop:com.styropyr0.prismal.PrismalBackdrop,onClick:()->Unit) {
+ PrismalGlassButton(onClick=onClick,backdrop=backdrop,modifier=Modifier.size(48.dp),height=null,shape={ CircleShape },
+  tint=if(dark) Color.White.copy(alpha=.08f) else Color.White.copy(alpha=.22f),contentPadding=PaddingValues(0.dp),horizontalArrangement=Arrangement.Center) {
+  GrafIcon(icon,null,if(dark) Color.White else Ink,21.dp)
  }
 }
 @Composable
@@ -477,8 +478,9 @@ private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Ur
   }
   Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=16.dp),verticalAlignment=Alignment.CenterVertically) {
    ProfileGlassIcon(Icons.Rounded.ArrowBack,dark,fill,stroke,backdrop,onBack); Spacer(Modifier.weight(1f))
-   Row(Modifier.height(50.dp).clip(CircleShape).background(fill).border(1.dp,stroke,CircleShape).clickable { }.padding(horizontal=18.dp),verticalAlignment=Alignment.CenterVertically) {
-    Text("Edit",color=foreground,fontSize=16.sp,fontWeight=FontWeight.Normal)
+   PrismalGlassButton(onClick={},backdrop=backdrop,modifier=Modifier,height=48.dp,
+    tint=if(dark) Color.White.copy(alpha=.08f) else Color.White.copy(alpha=.22f),contentPadding=PaddingValues(horizontal=20.dp)) {
+    Text("Edit",color=foreground,fontSize=15.sp,fontWeight=FontWeight.Normal)
    }
   }
   Box(Modifier.align(Alignment.TopCenter).padding(top=29.dp).size(108.dp).clip(CircleShape)
@@ -489,10 +491,13 @@ private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Ur
  }
 }
 @Composable
-private fun ProfileAction(icon:ImageVector,label:String,dark:Boolean,fill:Color,stroke:Brush,secondary:Color,onClick:()->Unit) {
- Column(Modifier.width(72.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-  Box(Modifier.size(64.dp).clip(CircleShape).background(fill).border(1.dp,stroke,CircleShape).clickable(onClick=onClick),contentAlignment=Alignment.Center) { GrafIcon(icon,label,Color.White,27.dp) }
-  Spacer(Modifier.height(7.dp)); Text(label,color=secondary,fontSize=12.sp,fontWeight=FontWeight.Normal,textAlign=TextAlign.Center)
+private fun ProfileAction(icon:ImageVector,label:String,dark:Boolean,fill:Color,stroke:Brush,secondary:Color,backdrop:com.styropyr0.prismal.PrismalBackdrop,onClick:()->Unit) {
+ Column(Modifier.width(64.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+  PrismalGlassButton(onClick=onClick,backdrop=backdrop,modifier=Modifier.size(56.dp),height=null,shape={ CircleShape },
+   tint=if(dark) Color.White.copy(alpha=.08f) else Color.White.copy(alpha=.22f),contentPadding=PaddingValues(0.dp),horizontalArrangement=Arrangement.Center) {
+   GrafIcon(icon,label,if(dark) Color.White else Ink,24.dp)
+  }
+  Spacer(Modifier.height(7.dp)); Text(label,color=secondary,fontSize=11.sp,fontWeight=FontWeight.Normal,textAlign=TextAlign.Center)
  }
 }
 @Composable
