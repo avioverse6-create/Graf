@@ -1,6 +1,27 @@
 package com.graf.messenger
 
 import android.os.Bundle
+import android.graphics.BitmapFactory
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
+import java.io.File
+import java.io.FileOutputStream
+import androidx.compose.material.icons.rounded.Call
+import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.CloudUpload
+import androidx.compose.material.icons.rounded.Close
+import androidx.compose.material.icons.rounded.DarkMode
+import androidx.compose.material.icons.rounded.LightMode
+import androidx.compose.material.icons.rounded.FormatSize
+import androidx.compose.material.icons.rounded.Bold
+
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
@@ -79,70 +100,67 @@ private enum class GrafTab(val title: String, val icon: ImageVector) {
 
 @Composable
 private fun GrafApp() {
-    val context = LocalContext.current
-    val prefs = remember { context.getSharedPreferences("graf_prefs", 0) }
-    var dark by remember { mutableStateOf(prefs.getBoolean("dark_theme", false)) }
-    var selectedTab by remember { mutableIntStateOf(0) }
-    var channelOpen by remember { mutableStateOf(false) }
-    var query by remember { mutableStateOf("") }
-    val backdrop = rememberPrismalGlassLayer()
-
-    val background = if (dark) {
-        Brush.linearGradient(listOf(Color(0xFF080D19), Color(0xFF182B43), Color(0xFF111522)))
-    } else {
-        Brush.linearGradient(listOf(Color(0xFFF6C7C1), Color(0xFF9EBAC7), Color(0xFFE6D5CC)))
-    }
-    val foreground = if (dark) Color(0xFFF5F7FC) else Ink
-    val secondary = if (dark) Color(0xFFB5C0D0) else Muted
-
-    CompositionLocalProvider(LocalTextStyle provides TextStyle(fontFamily = FontFamily(Font(R.font.inter_variable, weight = FontWeight.W900)), fontWeight = FontWeight.W900)) {
-    Box(Modifier.fillMaxSize()) {
-      Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
-        Column(Modifier.fillMaxSize()) {
-                Spacer(Modifier.height(48.dp))
-                AnimatedContent(
-                    targetState = channelOpen,
-                    transitionSpec = { fadeIn() togetherWith fadeOut() },
-                    label = "graf-screen"
-                ) { inChannel ->
-                    if (inChannel) {
-                        ChannelScreen(dark, foreground, secondary) { channelOpen = false }
-                    } else {
-                        when (GrafTab.entries[selectedTab]) {
-                            GrafTab.Home -> HomeScreen(dark, foreground, secondary) { channelOpen = true }
-                            GrafTab.Contact -> SimpleScreen("Contacts", "Your people will appear here.", Icons.Rounded.Contacts, foreground, secondary)
-                            GrafTab.Settings -> ProfileScreen(dark, foreground, secondary) { selectedTab = 0 }
-                            GrafTab.Search -> SearchScreen(query, { query = it }, dark, foreground, secondary) {
-                                channelOpen = true
-                            }
-                        }
-                    }
-                }
-            }
+ val context=LocalContext.current
+ val prefs=remember { context.getSharedPreferences("graf_prefs",0) }
+ var dark by remember { mutableStateOf(prefs.getBoolean("dark_theme",false)) }
+ var selectedTab by remember { mutableIntStateOf(0) }
+ var settingsOpen by remember { mutableStateOf(false) }
+ var channelOpen by remember { mutableStateOf(false) }
+ var photoViewer by remember { mutableStateOf(false) }
+ var query by remember { mutableStateOf("") }
+ var profilePhoto by remember { mutableStateOf(prefs.getString("profile_photo",null)?.let(Uri::parse)) }
+ var customFontPath by remember { mutableStateOf(prefs.getString("font_path",null)) }
+ var textScale by remember { mutableFloatStateOf(prefs.getFloat("text_scale",1f)) }
+ var boldText by remember { mutableStateOf(prefs.getBoolean("bold_text",true)) }
+ val backdrop=rememberPrismalGlassLayer()
+ val photoPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+  if(uri!=null) { runCatching { context.contentResolver.takePersistableUriPermission(uri,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }; profilePhoto=uri; prefs.edit().putString("profile_photo",uri.toString()).apply() }
+ }
+ val fontPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+  if(uri!=null) runCatching { context.contentResolver.openInputStream(uri)?.use { input -> val file=File(context.filesDir,"graf_custom_font.ttf"); FileOutputStream(file).use { input.copyTo(it) }; customFontPath=file.absolutePath; prefs.edit().putString("font_path",file.absolutePath).apply() } }
+ }
+ val background=if(dark) Brush.linearGradient(listOf(Color(0xFF080D19),Color(0xFF182B43),Color(0xFF111522))) else Brush.linearGradient(listOf(Color(0xFFF4D8D0),Color(0xFFA9C4D1),Color(0xFFE9DDD5)))
+ val foreground=if(dark) Color(0xFFF5F7FC) else Color(0xFF171B24)
+ val secondary=if(dark) Color(0xFFB5C0D0) else Color(0xFF596273)
+ val appFont=remember(customFontPath) { runCatching { customFontPath?.let { FontFamily(Font(File(it),weight=FontWeight.Normal)) } }.getOrNull() ?: FontFamily(Font(R.font.inter_variable,weight=FontWeight.W900)) }
+ val density=LocalDensity.current
+ CompositionLocalProvider(LocalDensity provides density.copy(fontScale=(density.fontScale*textScale).coerceIn(.75f,1.5f)),
+  LocalTextStyle provides TextStyle(fontFamily=appFont,fontWeight=if(boldText) FontWeight.W900 else FontWeight.Normal)) {
+  Box(Modifier.fillMaxSize()) {
+   Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
+    Column(Modifier.fillMaxSize()) {
+     Spacer(Modifier.height(48.dp))
+     AnimatedContent(targetState=Triple(channelOpen,selectedTab,settingsOpen),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
+      when {
+       state.first -> ChannelScreen(dark,foreground,secondary) { channelOpen=false }
+       state.second==2 && state.third -> SettingsScreen(dark,foreground,secondary,textScale,boldText,
+        onBack={settingsOpen=false},onThemeChange={dark=it;prefs.edit().putBoolean("dark_theme",it).apply()},
+        onScaleChange={textScale=it;prefs.edit().putFloat("text_scale",it).apply()},
+        onBoldChange={boldText=it;prefs.edit().putBoolean("bold_text",it).apply()},
+        onFontPick={fontPicker.launch(arrayOf("font/ttf","application/x-font-ttf","application/octet-stream"))},
+        onFontReset={customFontPath=null;prefs.edit().remove("font_path").apply()},hasCustomFont=customFontPath!=null)
+       else -> when(GrafTab.entries[state.second]) {
+        GrafTab.Home -> HomeScreen(dark,foreground,secondary) { channelOpen=true }
+        GrafTab.Contact -> SimpleScreen("Contacts","Your people will appear here.",Icons.Rounded.Contacts,foreground,secondary)
+        GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,
+         onBack={selectedTab=0},onMore={settingsOpen=true},onPhoto={photoPicker.launch(arrayOf("image/*"))},
+         onViewPhoto={if(profilePhoto!=null) photoViewer=true})
+        GrafTab.Search -> SearchScreen(query,{query=it},dark,foreground,secondary) { channelOpen=true }
+       }
       }
-
-        if (!channelOpen) {
-            PrismalGlassBottomTabs(
-                selectedTabIndex = { selectedTab },
-                onTabSelected = { selectedTab = it },
-                backdrop = backdrop,
-                tabsCount = GrafTab.entries.size,
-                tintDropletContent = false,
-                // Keep Prismal's tuned defaults for the complete capsule and its liquid lens.
-                modifier = Modifier.align(Alignment.BottomCenter)
-                    .navigationBarsPadding()
-                    .padding(horizontal = 20.dp, vertical = 8.dp)
-                    .fillMaxWidth()
-            ) {
-                GrafTab.entries.forEachIndexed { index, tab ->
-                    GrafBottomTab(index, tab, selectedTab, dark) { selectedTab = index }
-                }
-            }
-        }
+     }
     }
+   }
+   if(!channelOpen && !settingsOpen) {
+    PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
+     modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=8.dp).fillMaxWidth()) {
+      GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index } }
     }
+   }
+   if(photoViewer && profilePhoto!=null) ProfilePhotoViewer(profilePhoto!!,dark) { photoViewer=false }
+  }
+ }
 }
-
 @Composable
 private fun RowScope.GrafBottomTab(index: Int, tab: GrafTab, selected: Int, dark: Boolean, onClick: () -> Unit) {
     val highlighted = LocalPrismalBottomTabHighlightedIndex.current()
@@ -256,24 +274,43 @@ private fun ChannelScreen(dark: Boolean, foreground: Color, secondary: Color, on
 }
 
 @Composable
-private fun SettingsScreen(dark: Boolean, foreground: Color, secondary: Color, onThemeChange: (Boolean) -> Unit) {
-    Column(Modifier.fillMaxSize()) {
-        Header("Settings", "Personalize Graf", foreground)
-        Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp).clip(CircleShape)
-            .background(if (dark) Color.White.copy(alpha = .10f) else Color.White.copy(alpha = .28f))
-            .clickable { onThemeChange(!dark) }.padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
-            Column(Modifier.weight(1f)) {
-                Text("Appearance", color = foreground, fontSize = 16.sp, fontWeight = FontWeight.SemiBold)
-                Text(if (dark) "Dark theme" else "Light theme", color = secondary, fontSize = 13.sp)
-            }
-            Text(if (dark) "DARK" else "LIGHT", color = Blue, fontSize = 12.sp, fontWeight = FontWeight.Bold)
-        }
-        Spacer(Modifier.height(12.dp))
-        Text("GRAF MESSENGER · TEST BUILD 0.1.0", color = secondary, fontSize = 11.sp, letterSpacing = 1.sp,
-            modifier = Modifier.padding(24.dp))
-    }
+private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,onBack:()->Unit,onThemeChange:(Boolean)->Unit,onScaleChange:(Float)->Unit,onBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
+ val fill=if(dark) Color.White.copy(alpha=.10f) else Color.White.copy(alpha=.48f)
+ val stroke=if(dark) Color.White.copy(alpha=.24f) else Color.White.copy(alpha=.78f)
+ Column(Modifier.fillMaxSize().padding(horizontal=18.dp)) {
+  Row(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
+   ProfileGlassIcon(Icons.Rounded.ArrowBack,dark,fill,Brush.linearGradient(listOf(stroke,stroke.copy(alpha=.3f))),onBack)
+   Spacer(Modifier.width(14.dp)); Text("Настройки",color=foreground,fontSize=25.sp,fontWeight=FontWeight.W900)
+  }
+  SettingsGroup("ВНЕШНИЙ ВИД",foreground,secondary,fill,stroke) {
+   SettingsRow(Icons.Rounded.LightMode,"Светлая тема","Белое оформление",foreground,secondary) { onThemeChange(false) }
+   SettingsRow(Icons.Rounded.DarkMode,"Тёмная тема","Тёмное оформление",foreground,secondary) { onThemeChange(true) }
+  }
+  Spacer(Modifier.height(14.dp))
+  SettingsGroup("ТЕКСТ И ШРИФТ",foreground,secondary,fill,stroke) {
+   Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp)) {
+    Row(verticalAlignment=Alignment.CenterVertically) { GrafIcon(Icons.Rounded.FormatSize,"Размер",foreground,20.dp); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text("Размер символов",color=foreground,fontSize=15.sp); Text("${(textScale*100).toInt()}%",color=secondary,fontSize=12.sp) } }
+    androidx.compose.material.Slider(value=textScale,onValueChange=onScaleChange,valueRange=.8f..1.35f)
+   }
+   SettingsRow(Icons.Rounded.Bold,"Жирный текст",if(boldText) "Включён" else "Выключен",foreground,secondary) { onBoldChange(!boldText) }
+   SettingsRow(Icons.Rounded.CloudUpload,"Загрузить шрифт",if(hasCustomFont) "Свой TTF установлен" else "Выбрать файл .ttf",foreground,secondary,onFontPick)
+   if(hasCustomFont) SettingsRow(Icons.Rounded.Close,"Сбросить шрифт","Вернуться к Inter",foreground,secondary,onFontReset)
+  }
+  Text("Поддерживаются файлы TTF. Шрифт хранится на устройстве.",color=secondary,fontSize=12.sp,modifier=Modifier.padding(12.dp))
+ }
 }
-
+@Composable
+private fun SettingsGroup(title:String,foreground:Color,secondary:Color,fill:Color,stroke:Color,content:@Composable ColumnScope.()->Unit) {
+ Column(Modifier.fillMaxWidth()) { Text(title,color=secondary,fontSize=11.sp,letterSpacing=1.3.sp,modifier=Modifier.padding(start=12.dp,bottom=7.dp))
+  Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(25.dp)).background(fill).border(1.dp,stroke,androidx.compose.foundation.shape.RoundedCornerShape(25.dp)),content=content) }
+}
+@Composable
+private fun SettingsRow(icon:ImageVector,title:String,subtitle:String,foreground:Color,secondary:Color,onClick:()->Unit) {
+ Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=16.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically) {
+  GrafIcon(icon,title,foreground,21.dp); Spacer(Modifier.width(13.dp)); Column(Modifier.weight(1f)) { Text(title,color=foreground,fontSize=15.sp); Text(subtitle,color=secondary,fontSize=12.sp) }
+  GrafIcon(Icons.Rounded.ArrowBack,null,secondary,16.dp)
+ }
+}
 @Composable
 private fun SearchScreen(query: String, onQueryChange: (String) -> Unit, dark: Boolean,
                          foreground: Color, secondary: Color, onOpenChannel: () -> Unit) {
@@ -354,66 +391,62 @@ private fun GlassIconButton(icon: ImageVector, dark: Boolean, onClick: () -> Uni
 }
 
 @Composable
-private fun ProfileScreen(dark: Boolean, foreground: Color, secondary: Color, onBack: () -> Unit) {
-    val glassFill = if (dark) Color(0xFFBBD7F5).copy(alpha = .10f) else Color.White.copy(alpha = .24f)
-    val glassStroke = Brush.linearGradient(
-        if (dark) listOf(Color.White.copy(alpha = .72f), Color(0xFF8DBDFF).copy(alpha = .18f), Color.White.copy(alpha = .48f))
-        else listOf(Color.White.copy(alpha = .96f), Color(0xFF6F9FC8).copy(alpha = .24f), Color.White.copy(alpha = .72f))
-    )
-    Column(Modifier.fillMaxSize()) {
-        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
-            ProfileGlassIcon(Icons.Rounded.ArrowBack, dark, glassFill, glassStroke, onBack)
-            Spacer(Modifier.weight(1f))
-            Row(
-                Modifier.height(44.dp).clip(CircleShape).background(glassFill)
-                    .border(1.dp, glassStroke, CircleShape).clickable { }.padding(horizontal = 17.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.Center
-            ) {
-                GrafIcon(Icons.Rounded.Edit, "Edit profile", Blue, 17.dp)
-                Spacer(Modifier.width(8.dp))
-                Text("Изм.", color = foreground, fontSize = 14.sp, fontWeight = FontWeight.Black)
-            }
-        }
-        Spacer(Modifier.height(38.dp))
-        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Box(
-                Modifier.size(132.dp).clip(CircleShape)
-                    .background(Brush.linearGradient(listOf(Color(0xFF66C8FF), Color(0xFF3678F6), Color(0xFF9878F5))))
-                    .border(2.dp, glassStroke, CircleShape),
-                contentAlignment = Alignment.Center
-            ) { GrafIcon(Icons.Rounded.Person, "Profile photo", Color.White, 68.dp) }
-            Spacer(Modifier.height(20.dp))
-            Text("Ваш ник", color = foreground, fontSize = 25.sp, fontWeight = FontWeight.Black)
-            Spacer(Modifier.height(6.dp))
-            Text("@graf_user", color = secondary, fontSize = 14.sp, fontWeight = FontWeight.Black)
-        }
-        Spacer(Modifier.height(42.dp))
-        Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Top) {
-            ProfileAction(Icons.Rounded.PhotoCamera, "Изменить фото", dark, glassFill, glassStroke, secondary)
-            ProfileAction(Icons.Rounded.Edit, "Изменить профиль", dark, glassFill, glassStroke, secondary)
-            ProfileAction(Icons.Rounded.Settings, "Настройки", dark, glassFill, glassStroke, secondary)
-        }
+private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Uri?,onBack:()->Unit,onMore:()->Unit,onPhoto:()->Unit,onViewPhoto:()->Unit) {
+ val fill=if(dark) Color.White.copy(alpha=.12f) else Color.White.copy(alpha=.30f)
+ val stroke=Brush.linearGradient(listOf(Color.White.copy(alpha=.86f),Color.White.copy(alpha=.20f),Color.White.copy(alpha=.65f)))
+ Box(Modifier.fillMaxSize()) {
+  Column(Modifier.fillMaxSize()) {
+   Spacer(Modifier.height(260.dp))
+   Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally) {
+    Text("Alicia Brown 💎",color=foreground,fontSize=25.sp,fontWeight=FontWeight.W900)
+    Spacer(Modifier.height(4.dp)); Text("last seen just now",color=secondary,fontSize=15.sp,fontWeight=FontWeight.Normal)
+    Spacer(Modifier.height(18.dp))
+    Row(Modifier.clip(CircleShape).background(fill).border(1.dp,stroke,CircleShape).padding(horizontal=15.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically) {
+     GrafIcon(Icons.Rounded.MusicNote,"Music",foreground,15.dp); Spacer(Modifier.width(7.dp)); Text("Stayin' Alive - Bee Gees",color=foreground,fontSize=12.sp,fontWeight=FontWeight.Normal)
     }
+   }
+   Spacer(Modifier.height(18.dp))
+   Row(Modifier.fillMaxWidth().padding(horizontal=18.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
+    ProfileAction(Icons.Rounded.Call,"call",dark,fill,stroke,secondary) {}
+    ProfileAction(Icons.Rounded.Notifications,"mute",dark,fill,stroke,secondary) {}
+    ProfileAction(Icons.Rounded.Search,"search",dark,fill,stroke,secondary) {}
+    ProfileAction(Icons.Rounded.MoreHoriz,"more",dark,fill,stroke,secondary,onMore)
+   }
+  }
+  Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=16.dp),verticalAlignment=Alignment.CenterVertically) {
+   ProfileGlassIcon(Icons.Rounded.ArrowBack,dark,fill,stroke,onBack); Spacer(Modifier.weight(1f))
+   Row(Modifier.height(50.dp).clip(CircleShape).background(fill).border(1.dp,stroke,CircleShape).clickable { }.padding(horizontal=18.dp),verticalAlignment=Alignment.CenterVertically) {
+    Text("Edit",color=foreground,fontSize=16.sp,fontWeight=FontWeight.Normal)
+   }
+  }
+  Box(Modifier.align(Alignment.TopCenter).padding(top=29.dp).size(138.dp).clip(CircleShape)
+   .background(Brush.linearGradient(listOf(Color(0xFF69C9D0),Color(0xFF477EB5),Color(0xFFC8B5A0)))).border(2.dp,stroke,CircleShape)
+   .clickable(onClick=onViewPhoto),contentAlignment=Alignment.Center) {
+    if(photo!=null) ProfilePhotoImage(photo,Modifier.fillMaxSize()) else GrafIcon(Icons.Rounded.Person,"Profile photo",Color.White,70.dp)
+  }
+  Box(Modifier.align(Alignment.TopCenter).padding(top=29.dp).size(138.dp).clip(CircleShape).clickable(onClick=onPhoto))
+ }
 }
-
 @Composable
-private fun ProfileGlassIcon(icon: ImageVector, dark: Boolean, fill: Color, stroke: Brush, onClick: () -> Unit) {
-    Box(
-        Modifier.size(44.dp).clip(CircleShape).background(fill).border(1.dp, stroke, CircleShape).clickable(onClick = onClick),
-        contentAlignment = Alignment.Center
-    ) { GrafIcon(icon, "Back", if (dark) Color.White else Ink, 20.dp) }
+private fun ProfileAction(icon:ImageVector,label:String,dark:Boolean,fill:Color,stroke:Brush,secondary:Color,onClick:()->Unit) {
+ Column(Modifier.width(72.dp),horizontalAlignment=Alignment.CenterHorizontally) {
+  Box(Modifier.size(64.dp).clip(CircleShape).background(fill).border(1.dp,stroke,CircleShape).clickable(onClick=onClick),contentAlignment=Alignment.Center) { GrafIcon(icon,label,Color.White,27.dp) }
+  Spacer(Modifier.height(7.dp)); Text(label,color=secondary,fontSize=12.sp,fontWeight=FontWeight.Normal,textAlign=TextAlign.Center)
+ }
 }
-
 @Composable
-private fun ProfileAction(icon: ImageVector, label: String, dark: Boolean, fill: Color, stroke: Brush, secondary: Color) {
-    Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(
-            Modifier.size(62.dp).clip(CircleShape).background(fill).border(1.dp, stroke, CircleShape).clickable { },
-            contentAlignment = Alignment.Center
-        ) { GrafIcon(icon, label, if (dark) Color.White else Ink, 24.dp) }
-        Spacer(Modifier.height(10.dp))
-        Text(label, color = secondary, fontSize = 11.sp, fontWeight = FontWeight.Black,
-            textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 14.sp, maxLines = 2)
-    }
+private fun ProfilePhotoImage(uri:Uri,modifier:Modifier=Modifier) {
+ val context=LocalContext.current
+ val bitmap=remember(uri) { runCatching { context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() } }.getOrNull() }
+ if(bitmap!=null) Image(bitmap,contentDescription="Profile photo",modifier=modifier)
+}
+@Composable
+private fun ProfilePhotoViewer(uri:Uri,dark:Boolean,onClose:()->Unit) {
+ var drag by remember { mutableFloatStateOf(0f) }
+ Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.97f)).pointerInput(Unit) {
+  detectVerticalDragGestures(onVerticalDrag={_,amount->drag+=amount},onDragEnd={if(drag>90f) onClose();drag=0f})
+ },contentAlignment=Alignment.Center) {
+  ProfilePhotoImage(uri,Modifier.fillMaxWidth().aspectRatio(1f))
+  Box(Modifier.align(Alignment.TopEnd).padding(22.dp).size(44.dp).clip(CircleShape).background(Color.White.copy(alpha=.18f)).clickable(onClick=onClose),contentAlignment=Alignment.Center) { GrafIcon(Icons.Rounded.Close,"Close",Color.White,22.dp) }
+ }
 }
