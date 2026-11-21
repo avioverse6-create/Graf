@@ -236,7 +236,7 @@ private fun ChatsScreen(dark:Boolean,foreground:Color,secondary:Color,query:Stri
  val stories=listOf("Моя история","АСТ-54 Black","Лысый из...","Новосибирск","GradSPB")
  var folder by remember { mutableIntStateOf(0) }
  val panel=if(dark) Color(0xFF191919) else Color(0xFFE7E7E9)
- Column(Modifier.fillMaxSize().padding(bottom=86.dp)) {
+ Column(Modifier.fillMaxSize()) {
   Row(Modifier.fillMaxWidth().padding(horizontal=18.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
    Box(Modifier.clip(CircleShape).background(panel).clickable {}.padding(horizontal=17.dp,vertical=11.dp)) { Text("Изм.",color=foreground,fontSize=15.sp) }
    Spacer(Modifier.weight(1f))
@@ -267,7 +267,7 @@ private fun ChatsScreen(dark:Boolean,foreground:Color,secondary:Color,query:Stri
     }
    }
   }
-  LazyColumn(Modifier.fillMaxSize()) {
+  LazyColumn(Modifier.fillMaxSize(), contentPadding=PaddingValues(bottom=100.dp)) {
    items(channels.withIndex().filter { indexed -> val item=indexed.value; val folderMatch=when(folder) { 0 -> true; 1 -> indexed.index in listOf(0,3,7,10); 2 -> indexed.index in 0..6; 3 -> indexed.index in 7..13; else -> indexed.index==14 }; folderMatch && (query.isBlank() || item.first.contains(query,true) || item.second.contains(query,true)) }.map { it.value }) { item ->
     Row(Modifier.fillMaxWidth().clickable {}.padding(horizontal=17.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
      Box(Modifier.size(62.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Color(0xFF143E79),Color(0xFF4B91B8)))),contentAlignment=Alignment.Center) {
