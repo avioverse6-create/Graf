@@ -236,19 +236,7 @@ private fun GrafIcon(image: ImageVector, description: String?, tint: Color, size
         image,
         contentDescription = description,
         tint = tint,
-        modifier = Modifier.size(size * scale).drawWithContent {
-            drawContent()
-            if (bold) {
-                drawContext.canvas.save()
-                drawContext.canvas.translate(0.45f, 0f)
-                drawContent()
-                drawContext.canvas.restore()
-                drawContext.canvas.save()
-                drawContext.canvas.translate(0f, 0.45f)
-                drawContent()
-                drawContext.canvas.restore()
-            }
-        }
+        modifier = Modifier.size(size * scale * if (bold) 1.035f else 1f)
     )
 }
 
@@ -315,76 +303,41 @@ private fun ChatsScreen(
         "Наука" to "Открытия и исследования",
         "Город" to "Что происходит рядом"
     )
-    val listState = rememberLazyListState()
-    val density = LocalDensity.current
-    val hideSearch by remember(listState, density) {
-        derivedStateOf {
-            listState.firstVisibleItemIndex > 0 ||
-                listState.firstVisibleItemScrollOffset > with(density) { 28.dp.roundToPx() }
-        }
-    }
-    val neutralTint = if (dark) Color.White.copy(alpha = .12f) else Color.White.copy(alpha = .34f)
+    val editTint = if (dark) Color(0xFF007AFF) else Color(0xFF007AFF)
+    val neutralTint = if (dark) Color.White.copy(alpha = .10f) else Color.White.copy(alpha = .36f)
+    val outline = if (dark) Color.White.copy(alpha = .20f) else Color.Black.copy(alpha = .10f)
 
     Column(Modifier.fillMaxSize()) {
-        Box(
-            Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 18.dp, vertical = 7.dp),
-            contentAlignment = Alignment.Center
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Text("Чаты", color = foreground, fontSize = 22.sp, fontWeight = FontWeight.W900)
-            Row(
-                Modifier.align(Alignment.CenterStart),
-                horizontalArrangement = Arrangement.spacedBy(10.dp),
-                verticalAlignment = Alignment.CenterVertically
+            Box(
+                Modifier.size(46.dp).clip(CircleShape).background(editTint)
+                    .border(1.dp, Color.White.copy(alpha = .55f), CircleShape).clickable { },
+                contentAlignment = Alignment.Center
             ) {
-                PrismalGlassButton(
-                    onClick = {},
-                    backdrop = backdrop,
-                    modifier = Modifier.size(46.dp),
-                    height = 46.dp,
-                    shape = { PrismalCapsule() },
-                    tint = Color(0xFF007AFF),
-                    tintAlpha = 0.86f,
-                    specular = { grafGlassRim() },
-                    contentPadding = PaddingValues(0.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    GrafIcon(GrafEditIcon, "Редактировать", Color.White, 21.dp)
-                }
-                PrismalGlassButton(
-                    onClick = {},
-                    backdrop = backdrop,
-                    modifier = Modifier.size(46.dp),
-                    height = 46.dp,
-                    shape = { PrismalCapsule() },
-                    tint = neutralTint,
-                    specular = { grafGlassRim() },
-                    contentPadding = PaddingValues(0.dp),
-                    horizontalArrangement = Arrangement.Center
-                ) {
-                    GrafIcon(Icons.Rounded.Add, "Добавить", foreground, 25.dp)
-                }
+                GrafIcon(GrafEditIcon, "Редактировать", Color.White, 21.dp)
             }
+            Spacer(Modifier.width(10.dp))
+            Box(
+                Modifier.size(46.dp).clip(CircleShape).background(neutralTint)
+                    .border(1.dp, outline, CircleShape).clickable { },
+                contentAlignment = Alignment.Center
+            ) {
+                GrafIcon(Icons.Rounded.Add, "Добавить", foreground, 25.dp)
+            }
+            Spacer(Modifier.weight(1f))
+            Text("Чаты", color = foreground, fontSize = 22.sp, fontWeight = FontWeight.W900)
         }
 
-        AnimatedVisibility(
-            visible = !hideSearch,
-            enter = fadeIn(animationSpec = spring(dampingRatio = 0.86f, stiffness = 520f)) +
-                expandVertically(animationSpec = spring(dampingRatio = 0.86f, stiffness = 520f)),
-            exit = fadeOut(animationSpec = spring(dampingRatio = 0.92f, stiffness = 650f)) +
-                shrinkVertically(animationSpec = spring(dampingRatio = 0.92f, stiffness = 650f))
-        ) {
-            PrismalGlassButton(
-                onClick = {},
-                backdrop = backdrop,
-                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
-                height = 52.dp,
-                shape = { PrismalCapsule() },
-                tint = if (dark) Color.White.copy(alpha = .10f) else Color.White.copy(alpha = .30f),
-                specular = { grafGlassRim() },
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.Start
+        GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 9.dp)) {
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 GrafIcon(Icons.Rounded.Search, "Поиск", secondary, 21.dp)
+                Spacer(Modifier.width(10.dp))
                 BasicTextField(
                     value = query,
                     onValueChange = onQuery,
@@ -396,13 +349,12 @@ private fun ChatsScreen(
                             inner()
                         }
                     },
-                    modifier = Modifier.weight(1f)
+                    modifier = Modifier.fillMaxWidth()
                 )
             }
         }
 
         LazyColumn(
-            state = listState,
             modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 100.dp)
         ) {
@@ -423,36 +375,22 @@ private fun ChatsScreen(
                     Spacer(Modifier.width(13.dp))
                     Column(Modifier.weight(1f)) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(
-                                item.first,
-                                color = foreground,
-                                fontSize = 16.sp,
-                                fontWeight = FontWeight.W900,
-                                maxLines = 1,
-                                overflow = TextOverflow.Ellipsis,
-                                modifier = Modifier.weight(1f)
-                            )
+                            Text(item.first, color = foreground, fontSize = 16.sp, fontWeight = FontWeight.W900,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
                             Text("10:33", color = secondary, fontSize = 11.sp)
                         }
                         Spacer(Modifier.height(4.dp))
-                        Text(
-                            item.second,
-                            color = secondary,
-                            fontSize = 13.sp,
-                            maxLines = 2,
-                            overflow = TextOverflow.Ellipsis,
-                            lineHeight = 17.sp
-                        )
+                        Text(item.second, color = secondary, fontSize = 13.sp, maxLines = 2,
+                            overflow = TextOverflow.Ellipsis, lineHeight = 17.sp)
                     }
                 }
-                Box(
-                    Modifier.fillMaxWidth().padding(start = 92.dp).height(.5.dp)
-                        .background(if (dark) Color.White.copy(alpha = .08f) else Color.Black.copy(alpha = .08f))
-                )
+                Box(Modifier.fillMaxWidth().padding(start = 92.dp).height(.5.dp)
+                    .background(if (dark) Color.White.copy(alpha = .08f) else Color.Black.copy(alpha = .08f)))
             }
         }
     }
 }
+
 @Composable
 private fun ContactsScreen(dark:Boolean,foreground:Color,secondary:Color) {
  Column(Modifier.fillMaxSize().padding(bottom=88.dp)) {
