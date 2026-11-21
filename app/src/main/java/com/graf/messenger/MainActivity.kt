@@ -6,6 +6,7 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.graphics.asImageBitmap
@@ -153,7 +154,7 @@ private fun GrafApp() {
    }
    if(!channelOpen && !settingsOpen) {
     PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
-     modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=8.dp).fillMaxWidth()) {
+     modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=8.dp).fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(40.dp)).background(if(dark) Color.White.copy(alpha=.07f) else Color.White.copy(alpha=.58f)).border(1.dp,if(dark) Color.White.copy(alpha=.20f) else Color.White.copy(alpha=.78f),androidx.compose.foundation.shape.RoundedCornerShape(40.dp))) {
       GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index } }
     }
    }
@@ -183,7 +184,7 @@ private fun Header(title: String, subtitle: String? = null, foreground: Color, a
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = foreground, fontSize = 32.sp, fontWeight = FontWeight.W900)
+            Text(title, color = foreground, fontSize = 32.sp, fontWeight = LocalTextStyle.current.fontWeight)
             if (subtitle != null) Text(subtitle, color = foreground.copy(alpha = .62f), fontSize = 13.sp)
         }
         action?.invoke()
@@ -201,7 +202,7 @@ private fun HomeScreen(dark: Boolean, foreground: Color, secondary: Color, onOpe
                 ChannelAvatar()
                 Spacer(Modifier.width(13.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Graf News", color = foreground, fontSize = 17.sp, fontWeight = FontWeight.Black)
+                    Text("Graf News", color = foreground, fontSize = 17.sp, fontWeight = LocalTextStyle.current.fontWeight)
                     Spacer(Modifier.height(4.dp))
                     Text("Welcome to Graf. This is our first channel.", color = secondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -213,14 +214,14 @@ private fun HomeScreen(dark: Boolean, foreground: Color, secondary: Color, onOpe
             }
         }
         Spacer(Modifier.height(22.dp))
-        Text("CHANNELS", color = secondary, fontSize = 11.sp, fontWeight = FontWeight.Bold, letterSpacing = 1.5.sp,
+        Text("CHANNELS", color = secondary, fontSize = 11.sp, fontWeight = LocalTextStyle.current.fontWeight, letterSpacing = 1.5.sp,
             modifier = Modifier.padding(horizontal = 24.dp, vertical = 8.dp))
         GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp)) {
             Row(Modifier.fillMaxWidth().clickable(onClick = onOpenChannel).padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
                 ChannelAvatar()
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Graf — Official Channel", color = foreground, fontWeight = FontWeight.SemiBold, fontSize = 15.sp)
+                    Text("Graf — Official Channel", color = foreground, fontWeight = LocalTextStyle.current.fontWeight, fontSize = 15.sp)
                     Text("Tap to open the test channel", color = secondary, fontSize = 12.sp)
                 }
                 GrafIcon(Icons.Rounded.MoreHoriz, "More", secondary, 24.dp)
@@ -394,9 +395,9 @@ private fun GlassIconButton(icon: ImageVector, dark: Boolean, onClick: () -> Uni
 private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Uri?,onBack:()->Unit,onMore:()->Unit,onPhoto:()->Unit,onViewPhoto:()->Unit) {
  val fill=if(dark) Color.White.copy(alpha=.12f) else Color.White.copy(alpha=.30f)
  val stroke=Brush.linearGradient(listOf(Color.White.copy(alpha=.86f),Color.White.copy(alpha=.20f),Color.White.copy(alpha=.65f)))
- Box(Modifier.fillMaxSize()) {
+ Box(Modifier.fillMaxSize().offset(y=(-48).dp)) {
   Column(Modifier.fillMaxSize()) {
-   Spacer(Modifier.height(260.dp))
+   Spacer(Modifier.height(232.dp))
    Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally) {
     Text("Alicia Brown 💎",color=foreground,fontSize=25.sp,fontWeight=FontWeight.W900)
     Spacer(Modifier.height(4.dp)); Text("last seen just now",color=secondary,fontSize=15.sp,fontWeight=FontWeight.Normal)
@@ -421,10 +422,9 @@ private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Ur
   }
   Box(Modifier.align(Alignment.TopCenter).padding(top=29.dp).size(138.dp).clip(CircleShape)
    .background(Brush.linearGradient(listOf(Color(0xFF69C9D0),Color(0xFF477EB5),Color(0xFFC8B5A0)))).border(2.dp,stroke,CircleShape)
-   .clickable(onClick=onViewPhoto),contentAlignment=Alignment.Center) {
+   .combinedClickable(onClick=onViewPhoto,onLongClick=onPhoto),contentAlignment=Alignment.Center) {
     if(photo!=null) ProfilePhotoImage(photo,Modifier.fillMaxSize()) else GrafIcon(Icons.Rounded.Person,"Profile photo",Color.White,70.dp)
   }
-  Box(Modifier.align(Alignment.TopCenter).padding(top=29.dp).size(138.dp).clip(CircleShape).clickable(onClick=onPhoto))
  }
 }
 @Composable
