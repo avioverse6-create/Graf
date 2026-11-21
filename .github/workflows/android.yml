@@ -10,7 +10,7 @@ permissions:
 
 jobs:
   build:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -19,13 +19,15 @@ jobs:
         with:
           distribution: temurin
           java-version: '17'
+      - name: Set up Android SDK command-line tools
+        uses: android-actions/setup-android@v3
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Configure Android SDK
+      - name: Install Android 36 packages
         run: |
-          yes | sdkmanager --licenses >/dev/null
+          sdkmanager --licenses
           sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug --stacktrace
