@@ -8,6 +8,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
@@ -19,6 +20,9 @@ import androidx.compose.material.icons.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Campaign
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.Home
+import androidx.compose.material.icons.rounded.Edit
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Search
@@ -66,7 +70,7 @@ class MainActivity : ComponentActivity() {
 private enum class GrafTab(val title: String, val icon: ImageVector) {
     Home("Home", Icons.Rounded.Home),
     Contact("Contact", Icons.Rounded.Contacts),
-    Settings("Settings", Icons.Rounded.Settings),
+    Settings("Profile", Icons.Rounded.Person),
     Search("Search", Icons.Rounded.Search)
 }
 
@@ -103,10 +107,7 @@ private fun GrafApp() {
                         when (GrafTab.entries[selectedTab]) {
                             GrafTab.Home -> HomeScreen(dark, foreground, secondary) { channelOpen = true }
                             GrafTab.Contact -> SimpleScreen("Contacts", "Your people will appear here.", Icons.Rounded.Contacts, foreground, secondary)
-                            GrafTab.Settings -> SettingsScreen(dark, foreground, secondary) {
-                                dark = it
-                                prefs.edit().putBoolean("dark_theme", it).apply()
-                            }
+                            GrafTab.Settings -> ProfileScreen(dark, foreground, secondary) { selectedTab = 0 }
                             GrafTab.Search -> SearchScreen(query, { query = it }, dark, foreground, secondary) {
                                 channelOpen = true
                             }
@@ -159,7 +160,7 @@ private fun Header(title: String, subtitle: String? = null, foreground: Color, a
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = foreground, fontSize = 32.sp, fontWeight = FontWeight.Bold)
+            Text(title, color = foreground, fontSize = 32.sp, fontWeight = FontWeight.Black)
             if (subtitle != null) Text(subtitle, color = foreground.copy(alpha = .62f), fontSize = 13.sp)
         }
         action?.invoke()
@@ -177,7 +178,7 @@ private fun HomeScreen(dark: Boolean, foreground: Color, secondary: Color, onOpe
                 ChannelAvatar()
                 Spacer(Modifier.width(13.dp))
                 Column(Modifier.weight(1f)) {
-                    Text("Graf News", color = foreground, fontSize = 17.sp, fontWeight = FontWeight.SemiBold)
+                    Text("Graf News", color = foreground, fontSize = 17.sp, fontWeight = FontWeight.Black)
                     Spacer(Modifier.height(4.dp))
                     Text("Welcome to Graf. This is our first channel.", color = secondary, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 }
@@ -344,5 +345,70 @@ private fun GlassIconButton(icon: ImageVector, dark: Boolean, onClick: () -> Uni
         .background(if (dark) Color.White.copy(alpha = .12f) else Color.White.copy(alpha = .34f))
         .clickable(onClick = onClick), contentAlignment = Alignment.Center) {
         GrafIcon(icon, null, if (dark) Color.White else Ink, 21.dp)
+    }
+}
+
+@Composable
+private fun ProfileScreen(dark: Boolean, foreground: Color, secondary: Color, onBack: () -> Unit) {
+    val glassFill = if (dark) Color(0xFFBBD7F5).copy(alpha = .10f) else Color.White.copy(alpha = .24f)
+    val glassStroke = Brush.linearGradient(
+        if (dark) listOf(Color.White.copy(alpha = .72f), Color(0xFF8DBDFF).copy(alpha = .18f), Color.White.copy(alpha = .48f))
+        else listOf(Color.White.copy(alpha = .96f), Color(0xFF6F9FC8).copy(alpha = .24f), Color.White.copy(alpha = .72f))
+    )
+    Column(Modifier.fillMaxSize()) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically) {
+            ProfileGlassIcon(Icons.Rounded.ArrowBack, dark, glassFill, glassStroke, onBack)
+            Spacer(Modifier.weight(1f))
+            Row(
+                Modifier.height(44.dp).clip(CircleShape).background(glassFill)
+                    .border(1.dp, glassStroke, CircleShape).clickable { }.padding(horizontal = 17.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.Center
+            ) {
+                GrafIcon(Icons.Rounded.Edit, "Edit profile", Blue, 17.dp)
+                Spacer(Modifier.width(8.dp))
+                Text("Изм.", color = foreground, fontSize = 14.sp, fontWeight = FontWeight.Black)
+            }
+        }
+        Spacer(Modifier.height(38.dp))
+        Column(Modifier.fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(
+                Modifier.size(132.dp).clip(CircleShape)
+                    .background(Brush.linearGradient(listOf(Color(0xFF66C8FF), Color(0xFF3678F6), Color(0xFF9878F5))))
+                    .border(2.dp, glassStroke, CircleShape),
+                contentAlignment = Alignment.Center
+            ) { GrafIcon(Icons.Rounded.Person, "Profile photo", Color.White, 68.dp) }
+            Spacer(Modifier.height(20.dp))
+            Text("Ваш ник", color = foreground, fontSize = 25.sp, fontWeight = FontWeight.Black)
+            Spacer(Modifier.height(6.dp))
+            Text("@graf_user", color = secondary, fontSize = 14.sp, fontWeight = FontWeight.Black)
+        }
+        Spacer(Modifier.height(42.dp))
+        Row(Modifier.fillMaxWidth().padding(horizontal = 24.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Top) {
+            ProfileAction(Icons.Rounded.PhotoCamera, "Изменить фото", dark, glassFill, glassStroke, secondary)
+            ProfileAction(Icons.Rounded.Edit, "Изменить профиль", dark, glassFill, glassStroke, secondary)
+            ProfileAction(Icons.Rounded.Settings, "Настройки", dark, glassFill, glassStroke, secondary)
+        }
+    }
+}
+
+@Composable
+private fun ProfileGlassIcon(icon: ImageVector, dark: Boolean, fill: Color, stroke: Brush, onClick: () -> Unit) {
+    Box(
+        Modifier.size(44.dp).clip(CircleShape).background(fill).border(1.dp, stroke, CircleShape).clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) { GrafIcon(icon, "Back", if (dark) Color.White else Ink, 20.dp) }
+}
+
+@Composable
+private fun ProfileAction(icon: ImageVector, label: String, dark: Boolean, fill: Color, stroke: Brush, secondary: Color) {
+    Column(Modifier.width(96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(
+            Modifier.size(62.dp).clip(CircleShape).background(fill).border(1.dp, stroke, CircleShape).clickable { },
+            contentAlignment = Alignment.Center
+        ) { GrafIcon(icon, label, if (dark) Color.White else Ink, 24.dp) }
+        Spacer(Modifier.height(10.dp))
+        Text(label, color = secondary, fontSize = 11.sp, fontWeight = FontWeight.Black,
+            textAlign = androidx.compose.ui.text.style.TextAlign.Center, lineHeight = 14.sp, maxLines = 2)
     }
 }
