@@ -23,12 +23,12 @@ jobs:
         uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: '9.5.0'
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-      - name: Install Android 37 SDK
-        run: sdkmanager "platforms;android-37" "build-tools;37.0.0"
+      - name: Configure Android SDK
+        run: |
+          yes | sdkmanager --licenses >/dev/null
+          sdkmanager "platform-tools" "platforms;android-36" "build-tools;36.0.0"
       - name: Build debug APK
-        run: gradle :app:assembleDebug
+        run: gradle --no-daemon :app:assembleDebug --stacktrace
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
