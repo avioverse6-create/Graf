@@ -157,7 +157,7 @@ private fun GrafApp() {
         GrafTab.Contact -> ContactsScreen(dark,foreground,secondary)
         GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,backdrop,
          onBack={profileOpen=false},onMore={profileOpen=false},onPhoto={photoPicker.launch(arrayOf("image/*"))},
-         onViewPhoto={if(profilePhoto!=null) photoViewer=true})
+         onViewPhoto={if(profilePhoto!=null) photoViewer=true else photoPicker.launch(arrayOf("image/*"))})
        }
       }
      }
@@ -257,7 +257,7 @@ private fun ChatsScreen(dark:Boolean,foreground:Color,secondary:Color,query:Stri
    }
   }
   LazyColumn(Modifier.fillMaxSize()) {
-   items(channels.filter { query.isBlank() || it.first.contains(query,true) || it.second.contains(query,true) }) { item ->
+   items(channels.withIndex().filter { indexed -> val item=indexed.value; val folderMatch=when(folder) { 0 -> true; 1 -> indexed.index in listOf(0,3,7,10); 2 -> indexed.index in 0..6; 3 -> indexed.index in 7..13; else -> indexed.index==14 }; folderMatch && (query.isBlank() || item.first.contains(query,true) || item.second.contains(query,true)) }.map { it.value }) { item ->
     Row(Modifier.fillMaxWidth().clickable {}.padding(horizontal=17.dp,vertical=10.dp),verticalAlignment=Alignment.CenterVertically) {
      Box(Modifier.size(62.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Color(0xFF143E79),Color(0xFF4B91B8)))),contentAlignment=Alignment.Center) {
       Text(item.first.take(1),color=Color.White,fontSize=22.sp,fontWeight=FontWeight.Bold)
