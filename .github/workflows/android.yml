@@ -44,6 +44,11 @@ jobs:
         with:
           gradle-version: '9.5.0'
 
+      - name: Download Inter variable font
+        run: |
+          mkdir -p app/src/main/res/font
+          curl -fL "https://raw.githubusercontent.com/google/fonts/main/ofl/inter/Inter%5Bopsz%2Cwght%5D.ttf" -o app/src/main/res/font/inter_variable.ttf
+
       - name: Build debug APK
         run: gradle --no-daemon :app:assembleDebug --stacktrace
 
