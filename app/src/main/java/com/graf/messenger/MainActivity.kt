@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.Icon
+import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
@@ -92,6 +93,7 @@ private fun GrafApp() {
     val foreground = if (dark) Color(0xFFF5F7FC) else Ink
     val secondary = if (dark) Color(0xFFB5C0D0) else Muted
 
+    CompositionLocalProvider(LocalTextStyle provides TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Black)) {
     Box(Modifier.fillMaxSize()) {
       Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
         Column(Modifier.fillMaxSize()) {
@@ -135,6 +137,7 @@ private fun GrafApp() {
                 }
             }
         }
+    }
     }
 }
 
