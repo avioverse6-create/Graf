@@ -4,6 +4,7 @@ import android.os.Bundle
 import android.content.res.Configuration
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.rounded.Add
@@ -38,9 +39,13 @@ import androidx.compose.material.icons.rounded.FormatBold
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
+import androidx.compose.animation.core.spring
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -68,9 +73,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.PathParser
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
@@ -93,10 +100,20 @@ import com.styropyr0.prismal.components.PrismalGlassBottomTabs
 import com.styropyr0.prismal.components.PrismalGlassButton
 import com.styropyr0.prismal.sources.prismalGlassLayer
 import com.styropyr0.prismal.sources.rememberPrismalGlassLayer
+import com.styropyr0.prismal.shapes.PrismalCapsule
+import com.styropyr0.prismal.specular.PrismalSpecular
+import com.styropyr0.prismal.specular.PrismalSpecularStyle
 
 private val Ink = Color(0xFF10131B)
 private val Muted = Color(0xFF7D8493)
 private val Blue = Color(0xFF1688FF)
+private val LocalGrafIconScale = staticCompositionLocalOf { 1f }
+private val LocalGrafIconBold = staticCompositionLocalOf { false }
+private fun grafGlassRim() = PrismalSpecular.Default.copy(
+    width = 1.dp,
+    blurRadius = 0.6.dp,
+    style = PrismalSpecularStyle.Default(color = Color.White.copy(alpha = 0.78f))
+)
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -141,6 +158,8 @@ private fun GrafApp() {
  var customFontPath by remember { mutableStateOf(prefs.getString("font_path",null)) }
  var textScale by remember { mutableFloatStateOf(prefs.getFloat("text_scale",1f)) }
  var boldText by remember { mutableStateOf(prefs.getBoolean("bold_text",true)) }
+ var iconScale by remember { mutableFloatStateOf(prefs.getFloat("icon_scale",1f)) }
+ var iconBold by remember { mutableStateOf(prefs.getBoolean("icon_bold",false)) }
  val backdrop=rememberPrismalGlassLayer()
  val photoPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
   if(uri!=null) { runCatching { context.contentResolver.takePersistableUriPermission(uri,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }; profilePhoto=uri; prefs.edit().putString("profile_photo",uri.toString()).apply() }
@@ -159,7 +178,9 @@ private fun GrafApp() {
  }
  CompositionLocalProvider(LocalConfiguration provides themedConfiguration,
   LocalDensity provides Density(density.density,(density.fontScale*textScale).coerceIn(.75f,1.5f)),
-  LocalTextStyle provides TextStyle(fontFamily=appFont,fontWeight=if(boldText) FontWeight.W900 else FontWeight.Normal)) {
+  LocalTextStyle provides TextStyle(fontFamily=appFont,fontWeight=if(boldText) FontWeight.W900 else FontWeight.Normal),
+  LocalGrafIconScale provides iconScale,
+  LocalGrafIconBold provides iconBold) {
   Box(Modifier.fillMaxSize()) {
    Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
     Column(Modifier.fillMaxSize()) {
@@ -167,10 +188,12 @@ private fun GrafApp() {
      AnimatedContent(targetState=Pair(channelOpen,selectedTab),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
       when {
        state.first -> ChannelScreen(dark,foreground,secondary) { channelOpen=false }
-       state.second==3 && !profileOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,
+       state.second==3 && !profileOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,iconScale,iconBold,
         onBack={selectedTab=0},onProfileClick={profileOpen=true},onThemeChange={dark=it;prefs.edit().putBoolean("dark_theme",it).apply()},
         onScaleChange={textScale=it;prefs.edit().putFloat("text_scale",it).apply()},
         onBoldChange={boldText=it;prefs.edit().putBoolean("bold_text",it).apply()},
+        onIconScaleChange={iconScale=it;prefs.edit().putFloat("icon_scale",it).apply()},
+        onIconBoldChange={iconBold=it;prefs.edit().putBoolean("icon_bold",it).apply()},
         onFontPick={fontPicker.launch(arrayOf("font/ttf","application/x-font-ttf","application/octet-stream"))},
         onFontReset={customFontPath=null;prefs.edit().remove("font_path").apply()},hasCustomFont=customFontPath!=null)
        else -> when(GrafTab.entries[state.second]) {
@@ -207,7 +230,21 @@ private fun RowScope.GrafBottomTab(index: Int, tab: GrafTab, selected: Int, dark
 
 @Composable
 private fun GrafIcon(image: ImageVector, description: String?, tint: Color, size: Dp) {
-    Icon(image, contentDescription = description, tint = tint, modifier = Modifier.size(size))
+    val scale = LocalGrafIconScale.current
+    val bold = LocalGrafIconBold.current
+    Icon(
+        image,
+        contentDescription = description,
+        tint = tint,
+        modifier = Modifier.size(size * scale).drawWithContent {
+            drawContent()
+            if (bold) {
+                translate(left = 0.45f) { drawContent() }
+                translate(top = 0.45f) { drawContent() }
+                translate(left = 0.45f, top = 0.45f) { drawContent() }
+            }
+        }
+    )
 }
 
 @Composable
@@ -273,41 +310,76 @@ private fun ChatsScreen(
         "Наука" to "Открытия и исследования",
         "Город" to "Что происходит рядом"
     )
-    val editTint = if (dark) Color(0xFF9BCBFF).copy(alpha = .24f) else Color(0xFF80BFFF).copy(alpha = .42f)
-    val neutralTint = if (dark) Color.White.copy(alpha = .10f) else Color.White.copy(alpha = .36f)
-    val outline = if (dark) Color.White.copy(alpha = .20f) else Color.Black.copy(alpha = .10f)
+    val listState = rememberLazyListState()
+    val density = LocalDensity.current
+    val hideSearch by remember(listState, density) {
+        derivedStateOf {
+            listState.firstVisibleItemIndex > 0 ||
+                listState.firstVisibleItemScrollOffset > with(density) { 28.dp.roundToPx() }
+        }
+    }
+    val neutralTint = if (dark) Color.White.copy(alpha = .12f) else Color.White.copy(alpha = .34f)
 
     Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
-            verticalAlignment = Alignment.CenterVertically
+        Box(
+            Modifier.fillMaxWidth().height(62.dp).padding(horizontal = 18.dp, vertical = 7.dp),
+            contentAlignment = Alignment.Center
         ) {
-            Box(
-                Modifier.size(48.dp).clip(CircleShape).background(editTint)
-                    .border(1.dp, outline, CircleShape).clickable { },
-                contentAlignment = Alignment.Center
-            ) {
-                GrafIcon(GrafEditIcon, "Редактировать", if (dark) Color(0xFFB9DCFF) else Color(0xFF267FCB), 21.dp)
-            }
-            Spacer(Modifier.weight(1f))
             Text("Чаты", color = foreground, fontSize = 22.sp, fontWeight = FontWeight.W900)
-            Spacer(Modifier.weight(1f))
-            Box(
-                Modifier.size(48.dp).clip(CircleShape).background(neutralTint)
-                    .border(1.dp, outline, CircleShape).clickable { },
-                contentAlignment = Alignment.Center
+            Row(
+                Modifier.align(Alignment.CenterStart),
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+                verticalAlignment = Alignment.CenterVertically
             ) {
-                GrafIcon(Icons.Rounded.Add, "Добавить", foreground, 25.dp)
+                PrismalGlassButton(
+                    onClick = {},
+                    backdrop = backdrop,
+                    modifier = Modifier.size(46.dp),
+                    height = 46.dp,
+                    shape = { PrismalCapsule() },
+                    tint = Color(0xFF007AFF),
+                    tintAlpha = 0.86f,
+                    specular = { grafGlassRim() },
+                    contentPadding = PaddingValues(0.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    GrafIcon(GrafEditIcon, "Редактировать", Color.White, 21.dp)
+                }
+                PrismalGlassButton(
+                    onClick = {},
+                    backdrop = backdrop,
+                    modifier = Modifier.size(46.dp),
+                    height = 46.dp,
+                    shape = { PrismalCapsule() },
+                    tint = neutralTint,
+                    specular = { grafGlassRim() },
+                    contentPadding = PaddingValues(0.dp),
+                    horizontalArrangement = Arrangement.Center
+                ) {
+                    GrafIcon(Icons.Rounded.Add, "Добавить", foreground, 25.dp)
+                }
             }
         }
 
-        GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 9.dp)) {
-            Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically
+        AnimatedVisibility(
+            visible = !hideSearch,
+            enter = fadeIn(animationSpec = spring(dampingRatio = 0.86f, stiffness = 520f)) +
+                expandVertically(animationSpec = spring(dampingRatio = 0.86f, stiffness = 520f)),
+            exit = fadeOut(animationSpec = spring(dampingRatio = 0.92f, stiffness = 650f)) +
+                shrinkVertically(animationSpec = spring(dampingRatio = 0.92f, stiffness = 650f))
+        ) {
+            PrismalGlassButton(
+                onClick = {},
+                backdrop = backdrop,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 8.dp),
+                height = 52.dp,
+                shape = { PrismalCapsule() },
+                tint = if (dark) Color.White.copy(alpha = .10f) else Color.White.copy(alpha = .30f),
+                specular = { grafGlassRim() },
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.Start
             ) {
                 GrafIcon(Icons.Rounded.Search, "Поиск", secondary, 21.dp)
-                Spacer(Modifier.width(10.dp))
                 BasicTextField(
                     value = query,
                     onValueChange = onQuery,
@@ -319,13 +391,14 @@ private fun ChatsScreen(
                             inner()
                         }
                     },
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.weight(1f)
                 )
             }
         }
 
         LazyColumn(
-            Modifier.fillMaxSize(),
+            state = listState,
+            modifier = Modifier.fillMaxSize(),
             contentPadding = PaddingValues(bottom = 100.dp)
         ) {
             items(channels.filter { item ->
@@ -428,7 +501,7 @@ private fun ChannelScreen(dark: Boolean, foreground: Color, secondary: Color, on
 }
 
 @Composable
-private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,onBack:()->Unit,onProfileClick:()->Unit,onThemeChange:(Boolean)->Unit,onScaleChange:(Float)->Unit,onBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
+private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,iconScale:Float,iconBold:Boolean,onBack:()->Unit,onProfileClick:()->Unit,onThemeChange:(Boolean)->Unit,onScaleChange:(Float)->Unit,onBoldChange:(Boolean)->Unit,onIconScaleChange:(Float)->Unit,onIconBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
  val fill=if(dark) Color.White.copy(alpha=.10f) else Color.White.copy(alpha=.48f)
  val stroke=if(dark) Color.White.copy(alpha=.24f) else Color.White.copy(alpha=.78f)
  Column(Modifier.fillMaxSize().padding(horizontal=18.dp)) {
@@ -447,14 +520,30 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
   Spacer(Modifier.height(14.dp))
   SettingsGroup("ТЕКСТ И ШРИФТ",foreground,secondary,fill,stroke) {
    Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp)) {
-    Row(verticalAlignment=Alignment.CenterVertically) { GrafIcon(Icons.Rounded.FormatSize,"Размер",foreground,20.dp); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text("Размер символов",color=foreground,fontSize=15.sp); Text("${(textScale*100).toInt()}%",color=secondary,fontSize=12.sp) } }
+    Row(verticalAlignment=Alignment.CenterVertically) { GrafIcon(Icons.Rounded.FormatSize,"Размер",foreground,20.dp); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text("Размер текста",color=foreground,fontSize=15.sp); Text("${(textScale*100).toInt()}%",color=secondary,fontSize=12.sp) } }
     androidx.compose.material.Slider(value=textScale,onValueChange=onScaleChange,valueRange=.8f..1.35f)
    }
    SettingsRow(Icons.Rounded.FormatBold,"Жирный текст",if(boldText) "Включён" else "Выключен",foreground,secondary) { onBoldChange(!boldText) }
    SettingsRow(Icons.Rounded.CloudUpload,"Загрузить шрифт",if(hasCustomFont) "Свой TTF установлен" else "Выбрать файл .ttf",foreground,secondary,onFontPick)
    if(hasCustomFont) SettingsRow(Icons.Rounded.Close,"Сбросить шрифт","Вернуться к Inter",foreground,secondary,onFontReset)
   }
-  Text("Поддерживаются файлы TTF. Шрифт хранится на устройстве.",color=secondary,fontSize=12.sp,modifier=Modifier.padding(12.dp))
+  Spacer(Modifier.height(14.dp))
+  SettingsGroup("РАЗМЕР И СТИЛЬ ИКОНОК",foreground,secondary,fill,stroke) {
+   Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp)) {
+    Row(verticalAlignment=Alignment.CenterVertically) {
+     GrafIcon(Icons.Rounded.FormatSize,"Размер иконок",foreground,20.dp)
+     Spacer(Modifier.width(12.dp))
+     Column(Modifier.weight(1f)) {
+      Text("Размер SVG-символов",color=foreground,fontSize=15.sp)
+      Text("${(iconScale*100).toInt()}%",color=secondary,fontSize=12.sp)
+     }
+    }
+    androidx.compose.material.Slider(value=iconScale,onValueChange=onIconScaleChange,valueRange=.75f..1.55f)
+   }
+   SettingsRow(Icons.Rounded.FormatBold,"Жирные символы",if(iconBold) "Включено" else "Выключено",foreground,secondary) { onIconBoldChange(!iconBold) }
+  }
+  Text("Размер и насыщенность меняют значки интерфейса, включая кнопки и нижнюю панель. Размер текста настраивается отдельно.",color=secondary,fontSize=12.sp,modifier=Modifier.padding(12.dp))
+  Text("Поддерживаются файлы TTF. Шрифт хранится на устройстве.",color=secondary,fontSize=12.sp,modifier=Modifier.padding(horizontal=12.dp,vertical=4.dp))
  }
 }
 @Composable
