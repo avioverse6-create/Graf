@@ -84,6 +84,7 @@ import com.styropyr0.prismal.PrismalGlass
 import com.styropyr0.prismal.components.LocalPrismalBottomTabHighlightedIndex
 import com.styropyr0.prismal.components.PrismalGlassBottomTab
 import com.styropyr0.prismal.components.PrismalGlassBottomTabs
+import com.styropyr0.prismal.components.PrismalGlassButton
 import com.styropyr0.prismal.sources.prismalGlassLayer
 import com.styropyr0.prismal.sources.rememberPrismalGlassLayer
 
@@ -154,7 +155,7 @@ private fun GrafApp() {
        else -> when(GrafTab.entries[state.second]) {
         GrafTab.Home -> ChatsScreen(dark,foreground,secondary,query,{query=it})
         GrafTab.Contact -> ContactsScreen(dark,foreground,secondary)
-        GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,
+        GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,backdrop,
          onBack={profileOpen=false},onMore={profileOpen=false},onPhoto={photoPicker.launch(arrayOf("image/*"))},
          onViewPhoto={if(profilePhoto!=null) photoViewer=true})
        }
@@ -335,7 +336,7 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
  Column(Modifier.fillMaxSize().padding(horizontal=18.dp)) {
   Row(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
    ProfileGlassIcon(Icons.Rounded.ArrowBack,dark,fill,Brush.linearGradient(listOf(stroke,stroke.copy(alpha=.3f))),onBack)
-   Spacer(Modifier.width(14.dp)); Text("Настройки",color=foreground,fontSize=25.sp,fontWeight=FontWeight.W900)
+   Spacer(Modifier.width(14.dp)); Text("Настройки",color=foreground,fontSize=20.sp,fontWeight=FontWeight.W900)
   }
   SettingsGroup("АККАУНТ",foreground,secondary,fill,stroke) {\n   SettingsRow(Icons.Rounded.Person,"Мой профиль","Фото и информация профиля",foreground,secondary,onProfileClick)\n  }\n  Spacer(Modifier.height(14.dp))\n  SettingsGroup("ВНЕШНИЙ ВИД",foreground,secondary,fill,stroke) {
    SettingsRow(Icons.Rounded.LightMode,"Светлая тема","Белое оформление",foreground,secondary) { onThemeChange(false) }
@@ -452,12 +453,12 @@ private fun ProfileGlassIcon(icon:ImageVector,dark:Boolean,fill:Color,stroke:Bru
  }
 }
 @Composable
-private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Uri?,onBack:()->Unit,onMore:()->Unit,onPhoto:()->Unit,onViewPhoto:()->Unit) {
+private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Uri?,backdrop:com.styropyr0.prismal.PrismalBackdrop,onBack:()->Unit,onMore:()->Unit,onPhoto:()->Unit,onViewPhoto:()->Unit) {
  val fill=if(dark) Color.White.copy(alpha=.12f) else Color.White.copy(alpha=.30f)
  val stroke=Brush.linearGradient(listOf(Color.White.copy(alpha=.86f),Color.White.copy(alpha=.20f),Color.White.copy(alpha=.65f)))
  Box(Modifier.fillMaxSize().offset(y=(-48).dp)) {
   Column(Modifier.fillMaxSize()) {
-   Spacer(Modifier.height(184.dp))
+   Spacer(Modifier.height(150.dp))
    Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally) {
     Text("Alicia Brown 💎",color=foreground,fontSize=25.sp,fontWeight=FontWeight.W900)
     Spacer(Modifier.height(4.dp)); Text("last seen just now",color=secondary,fontSize=15.sp,fontWeight=FontWeight.Normal)
@@ -468,19 +469,19 @@ private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Ur
    }
    Spacer(Modifier.height(26.dp))
    Row(Modifier.fillMaxWidth().padding(horizontal=24.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
-    ProfileAction(Icons.Rounded.Call,"call",dark,fill,stroke,secondary) {}
-    ProfileAction(Icons.Rounded.Notifications,"mute",dark,fill,stroke,secondary) {}
-    ProfileAction(Icons.Rounded.Search,"search",dark,fill,stroke,secondary) {}
-    ProfileAction(Icons.Rounded.MoreHoriz,"more",dark,fill,stroke,secondary,onMore)
+    ProfileAction(Icons.Rounded.Call,"call",dark,fill,stroke,secondary,backdrop) {}
+    ProfileAction(Icons.Rounded.Notifications,"mute",dark,fill,stroke,secondary,backdrop) {}
+    ProfileAction(Icons.Rounded.Search,"search",dark,fill,stroke,secondary,backdrop) {}
+    ProfileAction(Icons.Rounded.MoreHoriz,"more",dark,fill,stroke,secondary,backdrop,onMore)
    }
   }
   Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=16.dp),verticalAlignment=Alignment.CenterVertically) {
-   ProfileGlassIcon(Icons.Rounded.ArrowBack,dark,fill,stroke,onBack); Spacer(Modifier.weight(1f))
+   ProfileGlassIcon(Icons.Rounded.ArrowBack,dark,fill,stroke,backdrop,onBack); Spacer(Modifier.weight(1f))
    Row(Modifier.height(50.dp).clip(CircleShape).background(fill).border(1.dp,stroke,CircleShape).clickable { }.padding(horizontal=18.dp),verticalAlignment=Alignment.CenterVertically) {
     Text("Edit",color=foreground,fontSize=16.sp,fontWeight=FontWeight.Normal)
    }
   }
-  Box(Modifier.align(Alignment.TopCenter).padding(top=29.dp).size(138.dp).clip(CircleShape)
+  Box(Modifier.align(Alignment.TopCenter).padding(top=29.dp).size(108.dp).clip(CircleShape)
    .background(Brush.linearGradient(listOf(Color(0xFF69C9D0),Color(0xFF477EB5),Color(0xFFC8B5A0)))).border(2.dp,stroke,CircleShape)
    .combinedClickable(onClick=onViewPhoto,onLongClick=onPhoto),contentAlignment=Alignment.Center) {
     if(photo!=null) ProfilePhotoImage(photo,Modifier.fillMaxSize()) else GrafIcon(Icons.Rounded.Person,"Profile photo",Color.White,70.dp)
