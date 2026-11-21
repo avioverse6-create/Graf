@@ -397,7 +397,7 @@ private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Ur
  val stroke=Brush.linearGradient(listOf(Color.White.copy(alpha=.86f),Color.White.copy(alpha=.20f),Color.White.copy(alpha=.65f)))
  Box(Modifier.fillMaxSize().offset(y=(-48).dp)) {
   Column(Modifier.fillMaxSize()) {
-   Spacer(Modifier.height(232.dp))
+   Spacer(Modifier.height(184.dp))
    Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally) {
     Text("Alicia Brown 💎",color=foreground,fontSize=25.sp,fontWeight=FontWeight.W900)
     Spacer(Modifier.height(4.dp)); Text("last seen just now",color=secondary,fontSize=15.sp,fontWeight=FontWeight.Normal)
@@ -406,8 +406,8 @@ private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Ur
      GrafIcon(Icons.Rounded.MusicNote,"Music",foreground,15.dp); Spacer(Modifier.width(7.dp)); Text("Stayin' Alive - Bee Gees",color=foreground,fontSize=12.sp,fontWeight=FontWeight.Normal)
     }
    }
-   Spacer(Modifier.height(18.dp))
-   Row(Modifier.fillMaxWidth().padding(horizontal=18.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
+   Spacer(Modifier.height(26.dp))
+   Row(Modifier.fillMaxWidth().padding(horizontal=24.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
     ProfileAction(Icons.Rounded.Call,"call",dark,fill,stroke,secondary) {}
     ProfileAction(Icons.Rounded.Notifications,"mute",dark,fill,stroke,secondary) {}
     ProfileAction(Icons.Rounded.Search,"search",dark,fill,stroke,secondary) {}
