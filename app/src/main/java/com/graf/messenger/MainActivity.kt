@@ -1,6 +1,7 @@
 package com.graf.messenger
 
 import android.os.Bundle
+import android.content.res.Configuration
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.horizontalScroll
@@ -71,6 +72,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
@@ -147,7 +149,12 @@ private fun GrafApp() {
  val secondary=if(dark) Color(0xFFB5C0D0) else Color(0xFF596273)
  val appFont=remember(customFontPath) { runCatching { customFontPath?.let { FontFamily(Font(File(it),weight=FontWeight.Normal)) } }.getOrNull() ?: FontFamily(Font(R.font.inter_variable,weight=FontWeight.W900)) }
  val density=LocalDensity.current
- CompositionLocalProvider(LocalDensity provides Density(density.density,(density.fontScale*textScale).coerceIn(.75f,1.5f)),
+ val themedConfiguration = Configuration(LocalConfiguration.current).apply {
+  uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+   (if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
+ }
+ CompositionLocalProvider(LocalConfiguration provides themedConfiguration,
+  LocalDensity provides Density(density.density,(density.fontScale*textScale).coerceIn(.75f,1.5f)),
   LocalTextStyle provides TextStyle(fontFamily=appFont,fontWeight=if(boldText) FontWeight.W900 else FontWeight.Normal)) {
   Box(Modifier.fillMaxSize()) {
    Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
