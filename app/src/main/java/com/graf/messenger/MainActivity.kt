@@ -40,7 +40,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.styropyr0.prismal.PrismalGlass
-import com.styropyr0.prismal.PrismalGlassPipeline
 import com.styropyr0.prismal.components.LocalPrismalBottomTabHighlightedIndex
 import com.styropyr0.prismal.components.PrismalGlassBottomTab
 import com.styropyr0.prismal.components.PrismalGlassBottomTabs
@@ -54,7 +53,6 @@ private val Blue = Color(0xFF1688FF)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        PrismalGlass.pipelineOverride = PrismalGlassPipeline.Legacy
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         window.decorView.systemUiVisibility =
@@ -125,8 +123,16 @@ private fun GrafApp() {
                 backdrop = backdrop,
                 tabsCount = GrafTab.entries.size,
                 tintDropletContent = false,
+                blurRadius = 8.dp,
+                refractionHeight = 22.dp,
+                refractionAmount = 36.dp,
+                dropletRefractionHeight = 18.dp,
+                dropletRefractionAmount = 22.dp,
+                dropletChromaticAberration = 0.55f,
+                renderWithLowOverhead = false,
                 modifier = Modifier.align(Alignment.BottomCenter)
-                    .padding(start = 18.dp, end = 18.dp, bottom = 22.dp)
+                    .navigationBarsPadding()
+                    .padding(start = 18.dp, end = 18.dp, top = 8.dp, bottom = 14.dp)
                     .fillMaxWidth()
             ) {
                 GrafTab.entries.forEachIndexed { index, tab ->
