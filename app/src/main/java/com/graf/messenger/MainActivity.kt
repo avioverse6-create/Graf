@@ -143,7 +143,7 @@ private fun GrafApp() {
    Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
     Column(Modifier.fillMaxSize()) {
      Spacer(Modifier.height(48.dp))
-     AnimatedContent(targetState=Triple(channelOpen,selectedTab,settingsOpen),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
+     AnimatedContent(targetState=Pair(channelOpen,selectedTab),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
       when {
        state.first -> ChannelScreen(dark,foreground,secondary) { channelOpen=false }
        state.second==2 && !profileOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,
