@@ -21,7 +21,7 @@ import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.LightMode
 import androidx.compose.material.icons.rounded.FormatSize
-import androidx.compose.material.icons.rounded.Bold
+import androidx.compose.material.icons.rounded.FormatBold
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -65,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -125,7 +126,7 @@ private fun GrafApp() {
  val secondary=if(dark) Color(0xFFB5C0D0) else Color(0xFF596273)
  val appFont=remember(customFontPath) { runCatching { customFontPath?.let { FontFamily(Font(File(it),weight=FontWeight.Normal)) } }.getOrNull() ?: FontFamily(Font(R.font.inter_variable,weight=FontWeight.W900)) }
  val density=LocalDensity.current
- CompositionLocalProvider(LocalDensity provides density.copy(fontScale=(density.fontScale*textScale).coerceIn(.75f,1.5f)),
+ CompositionLocalProvider(LocalDensity provides Density(density.density,(density.fontScale*textScale).coerceIn(.75f,1.5f)),
   LocalTextStyle provides TextStyle(fontFamily=appFont,fontWeight=if(boldText) FontWeight.W900 else FontWeight.Normal)) {
   Box(Modifier.fillMaxSize()) {
    Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
@@ -293,7 +294,7 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
     Row(verticalAlignment=Alignment.CenterVertically) { GrafIcon(Icons.Rounded.FormatSize,"Размер",foreground,20.dp); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text("Размер символов",color=foreground,fontSize=15.sp); Text("${(textScale*100).toInt()}%",color=secondary,fontSize=12.sp) } }
     androidx.compose.material.Slider(value=textScale,onValueChange=onScaleChange,valueRange=.8f..1.35f)
    }
-   SettingsRow(Icons.Rounded.Bold,"Жирный текст",if(boldText) "Включён" else "Выключен",foreground,secondary) { onBoldChange(!boldText) }
+   SettingsRow(Icons.Rounded.FormatBold,"Жирный текст",if(boldText) "Включён" else "Выключен",foreground,secondary) { onBoldChange(!boldText) }
    SettingsRow(Icons.Rounded.CloudUpload,"Загрузить шрифт",if(hasCustomFont) "Свой TTF установлен" else "Выбрать файл .ttf",foreground,secondary,onFontPick)
    if(hasCustomFont) SettingsRow(Icons.Rounded.Close,"Сбросить шрифт","Вернуться к Inter",foreground,secondary,onFontReset)
   }
@@ -391,6 +392,12 @@ private fun GlassIconButton(icon: ImageVector, dark: Boolean, onClick: () -> Uni
     }
 }
 
+@Composable
+private fun ProfileGlassIcon(icon:ImageVector,dark:Boolean,fill:Color,stroke:Brush,onClick:()->Unit) {
+ Box(Modifier.size(50.dp).clip(CircleShape).background(fill).border(1.dp,stroke,CircleShape).clickable(onClick=onClick),contentAlignment=Alignment.Center) {
+  GrafIcon(icon,null,if(dark) Color.White else Ink,22.dp)
+ }
+}
 @Composable
 private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Uri?,onBack:()->Unit,onMore:()->Unit,onPhoto:()->Unit,onViewPhoto:()->Unit) {
  val fill=if(dark) Color.White.copy(alpha=.12f) else Color.White.copy(alpha=.30f)
