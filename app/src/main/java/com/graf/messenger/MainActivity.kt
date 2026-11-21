@@ -40,6 +40,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.styropyr0.prismal.PrismalBackdrop
+import com.styropyr0.prismal.PrismalGlass
+import com.styropyr0.prismal.PrismalGlassPipeline
 import com.styropyr0.prismal.PrismalGlassSurface
 import com.styropyr0.prismal.components.LocalPrismalBottomTabHighlightedIndex
 import com.styropyr0.prismal.components.PrismalGlassBottomTab
@@ -55,6 +57,8 @@ private val Blue = Color(0xFF1688FF)
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        // Use the stable RenderEffect path on Android 13+ while AGSL device compatibility is validated.
+        PrismalGlass.pipelineOverride = PrismalGlassPipeline.Standard
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         window.decorView.systemUiVisibility =
