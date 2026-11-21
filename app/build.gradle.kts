@@ -6,7 +6,7 @@ plugins {
 android {
     namespace = "com.graf.messenger"
     compileSdk {
-        version = release(37)
+        version = release(36)
     }
 
     defaultConfig {
