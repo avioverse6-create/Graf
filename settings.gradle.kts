@@ -14,5 +14,8 @@ dependencyResolutionManagement {
     }
 }
 
+// PrismalAGSL is built from the pinned upstream source fetched by CI.
+includeBuild("third_party/PrismalAGSL")
+
 rootProject.name = "Graf"
 include(":app")
