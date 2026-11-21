@@ -40,6 +40,8 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -93,7 +95,7 @@ private fun GrafApp() {
     val foreground = if (dark) Color(0xFFF5F7FC) else Ink
     val secondary = if (dark) Color(0xFFB5C0D0) else Muted
 
-    CompositionLocalProvider(LocalTextStyle provides TextStyle(fontFamily = FontFamily.SansSerif, fontWeight = FontWeight.Black)) {
+    CompositionLocalProvider(LocalTextStyle provides TextStyle(fontFamily = FontFamily(Font(R.font.inter_variable, weight = FontWeight.W900)), fontWeight = FontWeight.W900)) {
     Box(Modifier.fillMaxSize()) {
       Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
         Column(Modifier.fillMaxSize()) {
@@ -163,7 +165,7 @@ private fun Header(title: String, subtitle: String? = null, foreground: Color, a
         verticalAlignment = Alignment.CenterVertically
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, color = foreground, fontSize = 32.sp, fontWeight = FontWeight.Black)
+            Text(title, color = foreground, fontSize = 32.sp, fontWeight = FontWeight.W900)
             if (subtitle != null) Text(subtitle, color = foreground.copy(alpha = .62f), fontSize = 13.sp)
         }
         action?.invoke()
