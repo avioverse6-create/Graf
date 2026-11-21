@@ -14,8 +14,5 @@ dependencyResolutionManagement {
     }
 }
 
-// Build PrismalAGSL from its tagged source instead of relying on its JitPack binary.
-includeBuild("third_party/PrismalAGSL")
-
 rootProject.name = "Graf"
 include(":app")
