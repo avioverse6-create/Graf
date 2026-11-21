@@ -88,8 +88,8 @@ private fun GrafApp() {
     val foreground = if (dark) Color(0xFFF5F7FC) else Ink
     val secondary = if (dark) Color(0xFFB5C0D0) else Muted
 
-    Box(Modifier.fillMaxSize().background(background)) {
-      Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop)) {
+    Box(Modifier.fillMaxSize()) {
+      Box(Modifier.fillMaxSize().background(background).prismalGlassLayer(backdrop)) {
         Column(Modifier.fillMaxSize()) {
                 Spacer(Modifier.height(48.dp))
                 AnimatedContent(
