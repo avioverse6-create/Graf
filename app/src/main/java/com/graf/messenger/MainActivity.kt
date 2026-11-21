@@ -461,8 +461,8 @@ private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Ur
   Column(Modifier.fillMaxSize()) {
    Spacer(Modifier.height(150.dp))
    Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally) {
-    Text("Alicia Brown 💎",color=foreground,fontSize=25.sp,fontWeight=FontWeight.W900)
-    Spacer(Modifier.height(4.dp)); Text("last seen just now",color=secondary,fontSize=15.sp,fontWeight=FontWeight.Normal)
+    Text("Alicia Brown 💎",color=foreground,fontSize=20.sp,fontWeight=FontWeight.W900)
+    Spacer(Modifier.height(4.dp)); Text("last seen just now",color=secondary,fontSize=13.sp,fontWeight=FontWeight.Normal)
     Spacer(Modifier.height(18.dp))
     Row(Modifier.clip(CircleShape).background(fill).border(1.dp,stroke,CircleShape).padding(horizontal=15.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically) {
      GrafIcon(Icons.Rounded.MusicNote,"Music",foreground,15.dp); Spacer(Modifier.width(7.dp)); Text("Stayin' Alive - Bee Gees",color=foreground,fontSize=12.sp,fontWeight=FontWeight.Normal)
