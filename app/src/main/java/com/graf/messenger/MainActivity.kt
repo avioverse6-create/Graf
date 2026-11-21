@@ -340,7 +340,9 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
   }
   SettingsGroup("АККАУНТ",foreground,secondary,fill,stroke) {
    SettingsRow(Icons.Rounded.Person,"Мой профиль","Фото и информация профиля",foreground,secondary,onProfileClick)
-  }\n  Spacer(Modifier.height(14.dp))\n  SettingsGroup("ВНЕШНИЙ ВИД",foreground,secondary,fill,stroke) {
+  }
+  Spacer(Modifier.height(14.dp))
+  SettingsGroup("ВНЕШНИЙ ВИД",foreground,secondary,fill,stroke) {
    SettingsRow(Icons.Rounded.LightMode,"Светлая тема","Белое оформление",foreground,secondary) { onThemeChange(false) }
    SettingsRow(Icons.Rounded.DarkMode,"Тёмная тема","Тёмное оформление",foreground,secondary) { onThemeChange(true) }
   }
