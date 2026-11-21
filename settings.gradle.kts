@@ -10,19 +10,12 @@ dependencyResolutionManagement {
     repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
     repositories {
         google()
-        // JitPack hosts GitHub-hosted artifacts; do not query Maven Central for them.
-        maven(url = "https://jitpack.io") {
-            content {
-                includeGroup("com.github.styropyr0")
-            }
-        }
-        mavenCentral {
-            content {
-                excludeGroup("com.github.styropyr0")
-            }
-        }
+        mavenCentral()
     }
 }
+
+// Build PrismalAGSL from its tagged source instead of relying on its JitPack binary.
+includeBuild("third_party/PrismalAGSL")
 
 rootProject.name = "Graf"
 include(":app")
