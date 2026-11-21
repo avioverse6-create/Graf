@@ -225,7 +225,8 @@ private fun Header(title: String, subtitle: String? = null, foreground: Color, a
 }
 
 private val GrafEditIcon: ImageVector by lazy {
-    ImageVector.Builder(
+    runCatching {
+        ImageVector.Builder(
         name = "GrafEdit",
         defaultWidth = 24.dp,
         defaultHeight = 24.dp,
@@ -243,6 +244,7 @@ private val GrafEditIcon: ImageVector by lazy {
             strokeLineJoin = StrokeJoin.Round
         )
     }.build()
+    }.getOrElse { Icons.Rounded.Edit }
 }
 
 @Composable
