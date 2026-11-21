@@ -37,6 +37,6 @@ dependencies {
     implementation("androidx.compose.runtime:runtime")
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.material:material-icons-extended")
-    implementation("com.github.styropyr0.PrismalAGSL:Prismal:1.0.7")
+    implementation("com.github.styropyr0:PrismalAGSL:Prismal:1.0.7")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
