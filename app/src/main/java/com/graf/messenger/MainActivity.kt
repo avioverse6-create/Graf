@@ -63,6 +63,7 @@ import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ArrowBack
+import androidx.compose.material.icons.rounded.ChevronLeft
 import androidx.compose.material.icons.rounded.Campaign
 import androidx.compose.material.icons.rounded.Contacts
 import androidx.compose.material.icons.rounded.Home
