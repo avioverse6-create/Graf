@@ -186,6 +186,9 @@ private fun GrafApp() {
  var profileName by remember { mutableStateOf(prefs.getString("profile_name","Alicia Brown") ?: "Alicia Brown") }
  var profileUsername by remember { mutableStateOf(prefs.getString("profile_username","username") ?: "username") }
  var profilePhone by remember { mutableStateOf(prefs.getString("profile_phone","+1488 1234 8922") ?: "+1488 1234 8922") }
+ var profileAddress by remember { mutableStateOf(prefs.getString("profile_address","0-27-14") ?: "0-27-14") }
+ var profileBirthday by remember { mutableStateOf(prefs.getString("profile_birthday","") ?: "") }
+ var profileChannels by remember { mutableStateOf(prefs.getString("profile_channels","") ?: "") }
  var channelOpen by remember { mutableStateOf(false) }
  val activity = context as? ComponentActivity
  SideEffect {
@@ -253,8 +256,11 @@ private fun GrafApp() {
          onViewPhoto={if(profilePhoto!=null) photoViewer=true else photoPicker.launch(arrayOf("image/*"))},
          profileColor=Color(profileColor),onProfileColorChange={profileColor=it.toArgb();prefs.edit().putInt("profile_color",profileColor).apply()},
          profileName=profileName,profileUsername=profileUsername,profilePhone=profilePhone,
-         onSaveProfile={name,username,phone -> profileName=name;profileUsername=username;profilePhone=phone
-          prefs.edit().putString("profile_name",name).putString("profile_username",username).putString("profile_phone",phone).apply()})
+         profileAddress=profileAddress,profileBirthday=profileBirthday,profileChannels=profileChannels,
+         onSaveProfile={name,username,phone,address,birthday,channels ->
+          profileName=name;profileUsername=username;profilePhone=phone;profileAddress=address;profileBirthday=birthday;profileChannels=channels
+          prefs.edit().putString("profile_name",name).putString("profile_username",username).putString("profile_phone",phone)
+           .putString("profile_address",address).putString("profile_birthday",birthday).putString("profile_channels",channels).apply()})
        }
       }
      }
@@ -683,10 +689,18 @@ private fun ProfileScreen(
     onBack: () -> Unit, onOpenSettings: () -> Unit, onPhoto: () -> Unit, onViewPhoto: () -> Unit,
     profileColor: Color, onProfileColorChange: (Color) -> Unit,
     profileName: String, profileUsername: String, profilePhone: String,
-    onSaveProfile: (String, String, String) -> Unit,
+    profileAddress: String, profileBirthday: String, profileChannels: String,
+    onSaveProfile: (String, String, String, String, String, String) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(false) }
+    var editProfileOpen by remember { mutableStateOf(false) }
+    var editName by remember(profileName) { mutableStateOf(profileName) }
+    var editUsername by remember(profileUsername) { mutableStateOf(profileUsername) }
+    var editPhone by remember(profilePhone) { mutableStateOf(profilePhone) }
+    var editAddress by remember(profileAddress) { mutableStateOf(profileAddress) }
+    var editBirthday by remember(profileBirthday) { mutableStateOf(profileBirthday) }
+    var editChannels by remember(profileChannels) { mutableStateOf(profileChannels) }
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("graf_prefs", 0) }
     var trackUri by remember { mutableStateOf(prefs.getString("profile_track_uri", null)?.let(Uri::parse)) }
@@ -750,13 +764,14 @@ private fun ProfileScreen(
                         }
                         Spacer(Modifier.weight(1f))
                         GlasmioMenu(
-                            expanded = menuExpanded, onExpandedChange = { menuExpanded = it }, itemCount = 1,
+                            expanded = menuExpanded, onExpandedChange = { menuExpanded = it }, itemCount = 2,
                             anchor = { open ->
                                 GlasmioIconButton(onClick = open, size = 42.dp) {
                                     Icon(Icons.Rounded.MoreVert, "Меню профиля", tint = text, modifier = Modifier.size(21.dp))
                                 }
                             },
                         ) { menuBackdrop, close ->
+                            GlasmioMenuItem(title = "Изменить профиль", onClick = { editProfileOpen = true; close() }, systemName = "pencil", backdrop = menuBackdrop, enabled = true)
                             GlasmioMenuItem(title = "Добавить песню", onClick = { audioPicker.launch(arrayOf("audio/*")); close() }, systemName = "music.note", backdrop = menuBackdrop, enabled = true)
                         }
                     }
@@ -851,7 +866,15 @@ private fun ProfileScreen(
                                 Text("@$profileUsername", color = Blue, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                             }
                             Spacer(Modifier.height(13.dp))
-                            ProfileDataRow("Адрес", "0-27-14", text, mutedText)
+                            ProfileDataRow("Адрес", profileAddress, text, mutedText)
+                            if (profileBirthday.isNotBlank()) {
+                                Spacer(Modifier.height(12.dp))
+                                ProfileDataRow("Дата рождения", profileBirthday, text, mutedText)
+                            }
+                            if (profileChannels.isNotBlank()) {
+                                Spacer(Modifier.height(12.dp))
+                                ProfileDataRow("Каналы", profileChannels, text, mutedText)
+                            }
                         }
                     }
 
@@ -862,6 +885,33 @@ private fun ProfileScreen(
                     Text("Историй пока нет", color = mutedText.copy(alpha = .78f), fontSize = 11.sp)
                 }
             },
+        )
+    }
+    if (editProfileOpen) {
+        androidx.compose.material.AlertDialog(
+            onDismissRequest = { editProfileOpen = false },
+            title = { Text("Изменить профиль", color = text) },
+            text = {
+                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ProfileEditField("Ник", editName, { editName = it }, text, mutedText)
+                    ProfileEditField("Username", editUsername, { editUsername = it.removePrefix("@") }, text, mutedText, "@")
+                    ProfileEditField("Телефон", editPhone, { editPhone = it }, text, mutedText)
+                    ProfileEditField("Адрес", editAddress, { editAddress = it }, text, mutedText)
+                    ProfileEditField("Дата рождения", editBirthday, { editBirthday = it }, text, mutedText)
+                    ProfileEditField("Каналы", editChannels, { editChannels = it }, text, mutedText)
+                }
+            },
+            confirmButton = {
+                androidx.compose.material.TextButton(onClick = {
+                    onSaveProfile(editName.trim(), editUsername.trim().removePrefix("@"), editPhone.trim(),
+                        editAddress.trim(), editBirthday.trim(), editChannels.trim())
+                    editProfileOpen = false
+                }) { Text("Сохранить", color = Blue) }
+            },
+            dismissButton = {
+                androidx.compose.material.TextButton(onClick = { editProfileOpen = false }) { Text("Отмена", color = mutedText) }
+            },
+            backgroundColor = glassTone,
         )
     }
 }
