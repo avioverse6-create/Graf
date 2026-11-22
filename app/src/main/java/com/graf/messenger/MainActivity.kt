@@ -177,6 +177,7 @@ private fun GrafApp() {
  val context=LocalContext.current
  val prefs=remember { context.getSharedPreferences("graf_prefs",0) }
  var dark by remember { mutableStateOf(prefs.getBoolean("dark_theme",true)) }
+ var profileTheme by remember { mutableIntStateOf(prefs.getInt("profile_theme",1)) }
  var selectedTab by remember { mutableIntStateOf(0) }
  var settingsOpen by remember { mutableStateOf(false) }
  var profileName by remember { mutableStateOf(prefs.getString("profile_name","Alicia Brown") ?: "Alicia Brown") }
@@ -220,8 +221,8 @@ private fun GrafApp() {
      AnimatedContent(targetState=Pair(channelOpen,selectedTab),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
       when {
        state.first -> ChannelScreen(dark,foreground,secondary) { channelOpen=false }
-       state.second==3 && settingsOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,iconScale,iconBold,
-        onBack={settingsOpen=false},onProfileClick={settingsOpen=false},onThemeChange={dark=it;prefs.edit().putBoolean("dark_theme",it).apply()},
+       state.second==3 && settingsOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,iconScale,iconBold,profileTheme,
+        onBack={settingsOpen=false},onProfileClick={settingsOpen=false},onThemeChange={dark=it;prefs.edit().putBoolean("dark_theme",it).apply()},onProfileThemeChange={profileTheme=it;prefs.edit().putInt("profile_theme",it).apply()},
         onScaleChange={textScale=it;prefs.edit().putFloat("text_scale",it).apply()},
         onBoldChange={boldText=it;prefs.edit().putBoolean("bold_text",it).apply()},
         onIconScaleChange={iconScale=it;prefs.edit().putFloat("icon_scale",it).apply()},
@@ -232,7 +233,7 @@ private fun GrafApp() {
         GrafTab.Home -> ChatsScreen(dark,foreground,secondary,query,{query=it},backdrop)
         GrafTab.Contact -> ContactsScreen(dark,foreground,secondary)
         GrafTab.Search -> SearchScreen(query,{query=it},dark,foreground,secondary) { channelOpen=false }
-        GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,
+        GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,profileTheme,
          onBack={selectedTab=0},onOpenSettings={settingsOpen=true},onPhoto={photoPicker.launch(arrayOf("image/*"))},
          onViewPhoto={if(profilePhoto!=null) photoViewer=true else photoPicker.launch(arrayOf("image/*"))},
          profileColor=Color(profileColor),onProfileColorChange={profileColor=it.toArgb();prefs.edit().putInt("profile_color",profileColor).apply()},
@@ -515,7 +516,7 @@ private fun ChannelScreen(dark: Boolean, foreground: Color, secondary: Color, on
 }
 
 @Composable
-private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,iconScale:Float,iconBold:Boolean,onBack:()->Unit,onProfileClick:()->Unit,onThemeChange:(Boolean)->Unit,onScaleChange:(Float)->Unit,onBoldChange:(Boolean)->Unit,onIconScaleChange:(Float)->Unit,onIconBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
+private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,iconScale:Float,iconBold:Boolean,profileTheme:Int,onBack:()->Unit,onProfileClick:()->Unit,onThemeChange:(Boolean)->Unit,onProfileThemeChange:(Int)->Unit,onScaleChange:(Float)->Unit,onBoldChange:(Boolean)->Unit,onIconScaleChange:(Float)->Unit,onIconBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
  val fill=if(dark) Color.White.copy(alpha=.10f) else Color.White.copy(alpha=.48f)
  val stroke=if(dark) Color.White.copy(alpha=.24f) else Color.White.copy(alpha=.78f)
  Column(Modifier.fillMaxSize().padding(horizontal=18.dp)) {
@@ -530,6 +531,9 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
   SettingsGroup("ВНЕШНИЙ ВИД",foreground,secondary,fill,stroke) {
    SettingsRow(Icons.Rounded.LightMode,"Светлая тема","Белое оформление",foreground,secondary) { onThemeChange(false) }
    SettingsRow(Icons.Rounded.DarkMode,"Тёмная тема","Тёмное оформление",foreground,secondary) { onThemeChange(true) }
+   SettingsRow(Icons.Rounded.Circle,"Чёрная тема профиля","Чёрный фон и единая тёмно-серая поверхность",foreground,secondary) { onProfileThemeChange(1) }
+   SettingsRow(Icons.Rounded.Circle,"Графитовая тема профиля","Сохранённая серая тема профиля",foreground,secondary) { onProfileThemeChange(0) }
+   Text(if(profileTheme==1) "Выбрана чёрная тема профиля" else "Выбрана графитовая тема профиля",color=secondary,fontSize=11.sp,modifier=Modifier.padding(start=16.dp,bottom=10.dp))
   }
   Spacer(Modifier.height(14.dp))
   SettingsGroup("ТЕКСТ И ШРИФТ",foreground,secondary,fill,stroke) {
@@ -660,7 +664,7 @@ private fun ProfileGlassIcon(icon:ImageVector,dark:Boolean,fill:Color,stroke:Bru
 }
 @Composable
 private fun ProfileScreen(
-    dark: Boolean, foreground: Color, secondary: Color, photo: Uri?,
+    dark: Boolean, foreground: Color, secondary: Color, photo: Uri?, profileTheme: Int,
     onBack: () -> Unit, onOpenSettings: () -> Unit, onPhoto: () -> Unit, onViewPhoto: () -> Unit,
     profileColor: Color, onProfileColorChange: (Color) -> Unit,
     profileName: String, profileUsername: String, profilePhone: String,
@@ -705,11 +709,11 @@ private fun ProfileScreen(
             kotlinx.coroutines.delay(100)
         }
     }
-    val glassTone = if (dark) Color(0xFF858B90) else Color(0xFFB0B5B9)
+    val glassTone = if (dark) Color(0xFF363C42) else Color(0xFFB0B5B9)
     val rim = Brush.linearGradient(listOf(Color.White.copy(alpha = .62f), Color.White.copy(alpha = .12f), Color.White.copy(alpha = .38f)))
     var selectedSection by remember { mutableIntStateOf(0) }
     val colors = listOf(Color(0xFF8994A5), Color(0xFF1688FF), Color(0xFF8B78D8), Color(0xFF48A99A), Color(0xFFD879A6), Color(0xFFD69A55), Color(0xFF6F8298), Color(0xFFE1E4EA))
-    val page = if (dark) Color(0xFF292E32) else Color(0xFFB0B5B9)
+    val page = if (dark) { if (profileTheme == 1) Color.Black else Color(0xFF292E32) } else Color(0xFFB0B5B9)
     val text = if (dark) Color(0xFFF5F7F8) else Color(0xFF202529)
     val mutedText = if (dark) Color(0xFFE0E3E5) else Color(0xFF50575C)
 
@@ -811,8 +815,8 @@ private fun ProfileScreen(
 
                     Spacer(Modifier.height(16.dp))
                     Box(
-                        Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp))
-                            .background(glassTone),
+                        Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(25.dp))
+                            .background(glassTone).border(1.dp, Color.White.copy(alpha=if (dark) .12f else .28f), androidx.compose.foundation.shape.RoundedCornerShape(25.dp)),
                     ) {
                         Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp)) {
                             ProfileDataRow("Номер", profilePhone, text, mutedText)
