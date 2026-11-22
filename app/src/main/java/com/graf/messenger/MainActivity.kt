@@ -895,31 +895,49 @@ private fun ProfileScreen(
         )
     }
     if (editProfileOpen) {
-        androidx.compose.material.AlertDialog(
+        androidx.compose.ui.window.Dialog(
             onDismissRequest = { editProfileOpen = false },
-            title = { Text("Изменить профиль", color = text) },
-            text = {
-                Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ProfileEditField("Ник", editName, { editName = it }, text, mutedText)
-                    ProfileEditField("Username", editUsername, { editUsername = it.removePrefix("@") }, text, mutedText, "@")
-                    ProfileEditField("Телефон", editPhone, { editPhone = it }, text, mutedText)
-                    ProfileEditField("Адрес", editAddress, { editAddress = it }, text, mutedText)
-                    ProfileEditField("Дата рождения", editBirthday, { editBirthday = it }, text, mutedText)
-                    ProfileEditField("Каналы", editChannels, { editChannels = it }, text, mutedText)
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)
+        ) {
+            Column(
+                Modifier.fillMaxSize().background(page).padding(horizontal = 22.dp, vertical = 28.dp)
+                    .verticalScroll(rememberScrollState()),
+                verticalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    GlasmioIconButton(onClick = { editProfileOpen = false }, size = 42.dp) {
+                        Icon(Icons.Rounded.ChevronLeft, "Назад", tint = text, modifier = Modifier.size(25.dp))
+                    }
+                    Spacer(Modifier.width(12.dp))
+                    Text("Изменить профиль", color = text, fontSize = 20.sp, fontWeight = FontWeight.SemiBold)
                 }
-            },
-            confirmButton = {
-                androidx.compose.material.TextButton(onClick = {
-                    onSaveProfile(editName.trim(), editUsername.trim().removePrefix("@"), editPhone.trim(),
-                        editAddress.trim(), editBirthday.trim(), editChannels.trim())
-                    editProfileOpen = false
-                }) { Text("Сохранить", color = Blue) }
-            },
-            dismissButton = {
-                androidx.compose.material.TextButton(onClick = { editProfileOpen = false }) { Text("Отмена", color = mutedText) }
-            },
-            backgroundColor = glassTone,
-        )
+                Spacer(Modifier.height(8.dp))
+                ProfileEditField("Ник", editName, { editName = it }, text, mutedText)
+                ProfileEditField("Username", editUsername, { editUsername = it.removePrefix("@") }, text, mutedText, "@")
+                ProfileEditField("Телефон", editPhone, { editPhone = it }, text, mutedText)
+                ProfileEditField("Адрес", editAddress, { editAddress = it }, text, mutedText)
+                ProfileEditField("Дата рождения", editBirthday, { editBirthday = it }, text, mutedText)
+                ProfileEditField("Каналы", editChannels, { editChannels = it }, text, mutedText)
+                Text("В поле «Каналы» укажи публичные ссылки или названия каналов, которые нужно показать в профиле.",
+                    color = mutedText, fontSize = 11.sp)
+                Spacer(Modifier.height(8.dp))
+                GlasmioButton(
+                    onClick = {
+                        onSaveProfile(editName.trim(), editUsername.trim().removePrefix("@"), editPhone.trim(),
+                            editAddress.trim(), editBirthday.trim(), editChannels.trim())
+                        editProfileOpen = false
+                    },
+                    modifier = Modifier.fillMaxWidth().height(48.dp),
+                    navigationSurfaceColor = glassTone
+                ) {
+                    Text("Сохранить изменения", color = text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                }
+                androidx.compose.material.TextButton(
+                    onClick = { editProfileOpen = false },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Отмена", color = mutedText) }
+            }
+        }
     }
 }
 
