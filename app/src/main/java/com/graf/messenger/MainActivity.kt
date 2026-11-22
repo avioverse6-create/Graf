@@ -751,33 +751,35 @@ private fun ProfileScreen(
                         .padding(horizontal = 16.dp).padding(bottom = 34.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
-                        GlasmioIconButton(onClick = onBack, size = 46.dp, emphasis = GlassEmphasis.Prominent, sampleBackdrop = true) {
-                            Icon(Icons.Rounded.ChevronLeft, "Back", tint = text, modifier = Modifier.size(29.dp))
+                    Box(Modifier.fillMaxWidth().height(246.dp)) {
+                        Row(Modifier.fillMaxWidth().padding(top = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                            GlasmioIconButton(onClick = onBack, size = 46.dp, emphasis = GlassEmphasis.Prominent, sampleBackdrop = true) {
+                                Icon(Icons.Rounded.ChevronLeft, "Back", tint = text, modifier = Modifier.size(29.dp))
+                            }
+                            Spacer(Modifier.weight(1f))
+                            GlasmioMenu(
+                                expanded = menuExpanded, onExpandedChange = { menuExpanded = it }, itemCount = 1,
+                                anchor = { open ->
+                                    GlasmioIconButton(onClick = open, size = 46.dp, emphasis = GlassEmphasis.Prominent, sampleBackdrop = true) {
+                                        Icon(Icons.Rounded.Edit, "Edit profile", tint = text, modifier = Modifier.size(20.dp))
+                                    }
+                                },
+                            ) { menuBackdrop, close ->
+                                GlasmioMenuItem(title = "Add a song", onClick = { audioPicker.launch(arrayOf("audio/*")); close() }, systemName = "music.note", backdrop = menuBackdrop, enabled = true)
+                            }
                         }
-                        Spacer(Modifier.weight(1f))
-                        GlasmioMenu(
-                            expanded = menuExpanded, onExpandedChange = { menuExpanded = it }, itemCount = 1,
-                            anchor = { open ->
-                                GlasmioIconButton(onClick = open, size = 46.dp, emphasis = GlassEmphasis.Prominent, sampleBackdrop = true) {
-                                    Icon(Icons.Rounded.Edit, "Edit profile", tint = text, modifier = Modifier.size(20.dp))
-                                }
-                            },
-                        ) { menuBackdrop, close ->
-                            GlasmioMenuItem(title = "Add a song", onClick = { audioPicker.launch(arrayOf("audio/*")); close() }, systemName = "music.note", backdrop = menuBackdrop, enabled = true)
+                        Column(Modifier.fillMaxWidth().padding(top = 29.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(Modifier.size(138.dp).clip(CircleShape).background(glassTone).clickable(onClick = onViewPhoto), contentAlignment = Alignment.Center) {
+                                if (photo != null) ProfilePhotoImage(photo, Modifier.fillMaxSize().clip(CircleShape))
+                                else GrafIcon(Icons.Rounded.Person, "Profile photo", text, 56.dp)
+                            }
+                            Spacer(Modifier.height(11.dp))
+                            Text(profileName, color = text, fontSize = 26.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
+                            Spacer(Modifier.height(3.dp))
+                            Text("last seen just now", color = mutedText, fontSize = 16.sp, textAlign = TextAlign.Center)
                         }
                     }
-
-                    Spacer(Modifier.height(12.dp))
-                    Box(Modifier.size(138.dp).clip(CircleShape).background(glassTone).clickable(onClick = onViewPhoto), contentAlignment = Alignment.Center) {
-                        if (photo != null) ProfilePhotoImage(photo, Modifier.fillMaxSize().clip(CircleShape))
-                        else GrafIcon(Icons.Rounded.Person, "Profile photo", text, 56.dp)
-                    }
-                    Spacer(Modifier.height(12.dp))
-                    Text(profileName, color = text, fontSize = 26.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center, maxLines = 1)
-                    Spacer(Modifier.height(3.dp))
-                    Text("last seen just now", color = mutedText, fontSize = 16.sp, textAlign = TextAlign.Center)
-                    Spacer(Modifier.height(17.dp))
+                    Spacer(Modifier.height(10.dp))
 
                     Box(
                         Modifier.fillMaxWidth(.76f).height(38.dp).clip(CircleShape)
