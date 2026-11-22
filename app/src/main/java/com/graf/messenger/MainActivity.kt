@@ -6,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Create
@@ -79,6 +80,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.vector.PathParser
@@ -173,6 +175,7 @@ private fun GrafApp() {
  var photoViewer by remember { mutableStateOf(false) }
  var query by remember { mutableStateOf("") }
  var profilePhoto by remember { mutableStateOf(prefs.getString("profile_photo",null)?.let(Uri::parse)) }
+ var profileColor by remember { mutableIntStateOf(prefs.getInt("profile_color",0xFF8994A5.toInt())) }
  var customFontPath by remember { mutableStateOf(prefs.getString("font_path",null)) }
  var textScale by remember { mutableFloatStateOf(prefs.getFloat("text_scale",1f)) }
  var boldText by remember { mutableStateOf(prefs.getBoolean("bold_text",true)) }
@@ -220,7 +223,8 @@ private fun GrafApp() {
         GrafTab.Search -> SearchScreen(query,{query=it},dark,foreground,secondary) { channelOpen=false }
         GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,
          onBack={profileOpen=false},onPhoto={photoPicker.launch(arrayOf("image/*"))},
-         onViewPhoto={if(profilePhoto!=null) photoViewer=true else photoPicker.launch(arrayOf("image/*"))})
+         onViewPhoto={if(profilePhoto!=null) photoViewer=true else photoPicker.launch(arrayOf("image/*"))},
+         profileColor=Color(profileColor),onProfileColorChange={profileColor=it.toArgb();prefs.edit().putInt("profile_color",profileColor).apply()})
        }
       }
      }
@@ -649,35 +653,37 @@ private fun ProfileScreen(
     onBack: () -> Unit,
     onPhoto: () -> Unit,
     onViewPhoto: () -> Unit,
+    profileColor: Color,
+    onProfileColorChange: (Color) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
+    var colorPickerOpen by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(false) }
-    val pageBackground = if (dark) {
-        Brush.verticalGradient(listOf(Color(0xFF000000), Color(0xFF080B12), Color(0xFF000000)))
-    } else {
-        Brush.verticalGradient(listOf(Color(0xFFF7F8FA), Color(0xFFE8EBF0), Color(0xFFF7F8FA)))
-    }
+    var selectedSection by remember { mutableIntStateOf(0) }
+    val colors = listOf(
+        Color(0xFF8994A5), Color(0xFF1688FF), Color(0xFF8B78D8),
+        Color(0xFF48A99A), Color(0xFFD879A6), Color(0xFFD69A55),
+        Color(0xFF6F8298), Color(0xFFE1E4EA)
+    )
+    val pageBackground = Brush.verticalGradient(listOf(Color.Black, Color(0xFF030405), Color.Black))
 
-    GlasmioTheme(isDark = dark) {
+    GlasmioTheme(isDark = true) {
         GlasmioBackdropHost(
             modifier = Modifier.fillMaxSize(),
-            sampledContent = {
-                Box(Modifier.fillMaxSize().background(pageBackground))
-            },
+            sampledContent = { Box(Modifier.fillMaxSize().background(Color.Black)) },
             overlayContent = {
                 Column(
-                    Modifier.fillMaxSize().background(Color.Transparent)
-                        .padding(horizontal = 22.dp)
+                    Modifier.fillMaxSize()
+                        .background(Color.Transparent)
+                        .verticalScroll(rememberScrollState())
+                        .padding(horizontal = 20.dp)
+                        .padding(bottom = 116.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Spacer(Modifier.height(54.dp))
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        GlasmioButton(
-                            onClick = { },
-                        ) {
-                            Text("Edit", color = foreground, fontSize = 15.sp)
+                    Spacer(Modifier.height(12.dp))
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        GlasmioIconButton(onClick = onBack, size = 42.dp) {
+                            Icon(Icons.Rounded.ArrowBack, contentDescription = "Назад", tint = foreground, modifier = Modifier.size(21.dp))
                         }
                         Spacer(Modifier.weight(1f))
                         GlasmioMenu(
@@ -685,25 +691,17 @@ private fun ProfileScreen(
                             onExpandedChange = { menuExpanded = it },
                             itemCount = 2,
                             anchor = { open ->
-                                GlasmioIconButton(
-                                    onClick = open,
-                                    size = 44.dp,
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Rounded.MoreVert,
-                                        contentDescription = "Меню профиля",
-                                        tint = foreground,
-                                        modifier = Modifier.size(22.dp),
-                                    )
+                                GlasmioIconButton(onClick = open, size = 42.dp) {
+                                    Icon(Icons.Rounded.MoreVert, contentDescription = "Меню профиля", tint = foreground, modifier = Modifier.size(21.dp))
                                 }
                             },
                         ) { menuBackdrop, close ->
                             GlasmioMenuItem(
                                 title = "Цвета профиля",
-                                onClick = close,
+                                onClick = { colorPickerOpen = true; close() },
                                 systemName = "paintpalette",
                                 backdrop = menuBackdrop,
-                                enabled = false,
+                                enabled = true,
                             )
                             GlasmioMenuItem(
                                 title = "Юзернейм",
@@ -715,87 +713,142 @@ private fun ProfileScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(28.dp))
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        GlasmioIconButton(
-                            onClick = onViewPhoto,
-                            size = 148.dp,
-                            modifier = Modifier.pointerInput(photo) {
-                                var pullDistance = 0f
-                                detectVerticalDragGestures(
-                                    onVerticalDrag = { _, amount ->
-                                        if (amount > 0f) pullDistance += amount
-                                        else pullDistance = 0f
-                                    },
-                                    onDragEnd = {
-                                        if (pullDistance > 48.dp.toPx()) onViewPhoto()
-                                        pullDistance = 0f
-                                    },
-                                    onDragCancel = { pullDistance = 0f },
-                                )
-                            },
-                        ) {
-                            Box(
-                                Modifier.fillMaxSize().padding(4.dp)
-                                    .clip(CircleShape)
-                                    .background(
-                                        Brush.linearGradient(
-                                            listOf(Color(0xFF1688FF), Color(0xFF65C8D0), Color(0xFF9A80D8))
-                                        )
-                                    ),
-                                contentAlignment = Alignment.Center,
+                    AnimatedVisibility(visible = colorPickerOpen, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+                        GlasmioButton(onClick = { }) {
+                            Row(
+                                Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
+                                horizontalArrangement = Arrangement.spacedBy(9.dp),
+                                verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                if (photo != null) {
-                                    ProfilePhotoImage(photo, Modifier.fillMaxSize())
-                                } else {
-                                    GrafIcon(Icons.Rounded.Person, "Фото профиля", Color.White, 68.dp)
+                                colors.forEach { color ->
+                                    Box(
+                                        Modifier.size(25.dp).clip(CircleShape)
+                                            .background(color)
+                                            .then(if (profileColor == color) Modifier.border(2.dp, Color.White, CircleShape) else Modifier)
+                                            .clickable { onProfileColorChange(color); colorPickerOpen = false }
+                                    )
                                 }
                             }
                         }
                     }
 
                     Spacer(Modifier.height(18.dp))
-                    Text(
-                        "Alicia Brown 💎",
-                        color = foreground,
-                        fontSize = 23.sp,
-                        fontWeight = FontWeight.W900,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(5.dp))
-                    Text(
-                        "@username",
-                        color = secondary,
-                        fontSize = 14.sp,
-                        textAlign = TextAlign.Center,
-                        modifier = Modifier.fillMaxWidth(),
-                    )
-                    Spacer(Modifier.height(30.dp))
+                    Box(
+                        Modifier.size(112.dp).clip(CircleShape)
+                            .background(profileColor.copy(alpha = .16f))
+                            .clickable(onClick = onViewPhoto)
+                            .pointerInput(photo) {
+                                var pullDistance = 0f
+                                detectVerticalDragGestures(
+                                    onVerticalDrag = { _, amount -> if (amount > 0f) pullDistance += amount else pullDistance = 0f },
+                                    onDragEnd = { if (pullDistance > 48.dp.toPx()) onViewPhoto(); pullDistance = 0f },
+                                    onDragCancel = { pullDistance = 0f },
+                                )
+                            },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (photo != null) {
+                            ProfilePhotoImage(photo, Modifier.fillMaxSize().clip(CircleShape))
+                        } else {
+                            GrafIcon(Icons.Rounded.Person, "Фото профиля", Color.White, 52.dp)
+                        }
+                    }
 
+                    Spacer(Modifier.height(10.dp))
+                    Text("Alicia Brown 💎", color = foreground, fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(2.dp))
+                    Text("@username", color = secondary, fontSize = 13.sp, textAlign = TextAlign.Center)
+                    Spacer(Modifier.height(3.dp))
+                    Text("★ 4.9 · рейтинг", color = Color(0xFF858B96), fontSize = 10.sp, textAlign = TextAlign.Center)
+
+                    Spacer(Modifier.height(15.dp))
                     Row(
                         Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        GlasmioButton(onClick = { }, modifier = Modifier.weight(1.45f)) {
+                            Row(Modifier.padding(horizontal = 7.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.MusicNote, null, tint = foreground, modifier = Modifier.size(16.dp))
+                                Spacer(Modifier.width(5.dp))
+                                Text("Метель — PLOHOYPAREN", color = foreground, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            }
+                        }
+                        GlasmioButton(onClick = { }, modifier = Modifier.weight(1f)) {
+                            Row(Modifier.padding(horizontal = 7.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text("Баланс", color = secondary, fontSize = 10.sp)
+                                Spacer(Modifier.width(5.dp))
+                                Text("◆ 0.29", color = foreground, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Icon(Icons.Rounded.ArrowBack, null, tint = secondary, modifier = Modifier.size(13.dp).graphicsLayer { rotationZ = 180f })
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
                         verticalAlignment = Alignment.Top,
                     ) {
-                        ProfileGlasmioAction(
-                            Icons.Rounded.PhotoCamera, "Сменить фото", foreground, secondary, onPhoto
-                        )
-                        ProfileGlasmioAction(
-                            Icons.Rounded.Edit, "Изменить", foreground, secondary, { }
-                        )
-                        ProfileGlasmioAction(
-                            Icons.Rounded.Settings, "Настройки", foreground, secondary, onBack
-                        )
+                        ProfileGlasmioAction(Icons.Rounded.PhotoCamera, "Фото", foreground, secondary, onPhoto)
+                        ProfileGlasmioAction(Icons.Rounded.Edit, "Изменить", foreground, secondary, { })
+                        ProfileGlasmioAction(Icons.Rounded.Settings, "Настройки", foreground, secondary, onBack)
                         ProfileGlasmioAction(
                             if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications,
                             "Беззвучно", foreground, secondary, { muted = !muted }
                         )
                     }
-                    Spacer(Modifier.height(24.dp))
+
+                    Spacer(Modifier.height(16.dp))
+                    GlasmioButton(onClick = { }) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 9.dp)) {
+                            ProfileDataRow("Номер", "+1488 1234 8922", foreground, secondary)
+                            Spacer(Modifier.height(8.dp))
+                            ProfileDataRow("Юз", "@pidor", foreground, secondary)
+                            Spacer(Modifier.height(8.dp))
+                            ProfileDataRow("Адрес", "Не указан", foreground, secondary)
+                        }
+                    }
+
+                    Spacer(Modifier.height(16.dp))
+                    GlasmioButton(onClick = { }) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(5.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Box(
+                                Modifier.weight(1f).clip(CircleShape)
+                                    .background(if (selectedSection == 0) Color.White.copy(alpha = .17f) else Color.Transparent)
+                                    .clickable { selectedSection = 0 }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text("Подарки", color = if (selectedSection == 0) foreground else secondary, fontSize = 12.sp)
+                            }
+                            Box(
+                                Modifier.weight(1f).clip(CircleShape)
+                                    .background(if (selectedSection == 1) Color.White.copy(alpha = .17f) else Color.Transparent)
+                                    .clickable { selectedSection = 1 }
+                                    .padding(vertical = 10.dp),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Text("Истории", color = if (selectedSection == 1) foreground else secondary, fontSize = 12.sp)
+                            }
+                        }
+                    }
+                    Spacer(Modifier.height(10.dp))
+                    Text(if (selectedSection == 0) "Подарков пока нет" else "Историй пока нет", color = secondary.copy(alpha = .72f), fontSize = 11.sp)
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun ProfileDataRow(title: String, value: String, foreground: Color, secondary: Color) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = secondary, fontSize = 11.sp, modifier = Modifier.width(62.dp))
+        Text(value, color = foreground, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -807,43 +860,15 @@ private fun ProfileGlasmioAction(
     secondary: Color,
     onClick: () -> Unit,
 ) {
-    Column(
-        Modifier.width(76.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-    ) {
-        GlasmioIconButton(
-            onClick = onClick,
-            size = 58.dp,
-        ) {
-            Icon(
-                imageVector = icon,
-                contentDescription = label,
-                tint = foreground,
-                modifier = Modifier.size(24.dp),
-            )
+    Column(Modifier.width(68.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        GlasmioIconButton(onClick = onClick, size = 50.dp) {
+            Icon(imageVector = icon, contentDescription = label, tint = foreground, modifier = Modifier.size(21.dp))
         }
-        Spacer(Modifier.height(8.dp))
-        Text(
-            label,
-            color = secondary,
-            fontSize = 11.sp,
-            textAlign = TextAlign.Center,
-            maxLines = 2,
-            lineHeight = 13.sp,
-        )
+        Spacer(Modifier.height(5.dp))
+        Text(label, color = secondary, fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 1)
     }
 }
 
-@Composable
-private fun ProfileAction(icon:ImageVector,label:String,dark:Boolean,fill:Color,stroke:Brush,secondary:Color,backdrop:com.styropyr0.prismal.PrismalBackdrop,onClick:()->Unit) {
- Column(Modifier.width(64.dp),horizontalAlignment=Alignment.CenterHorizontally) {
-  PrismalGlassButton(onClick=onClick,backdrop=backdrop,modifier=Modifier.size(56.dp),height=null,shape={ CircleShape },
-   tint=if(dark) Color.White.copy(alpha=.08f) else Color.White.copy(alpha=.22f),contentPadding=PaddingValues(0.dp),horizontalArrangement=Arrangement.Center) {
-   GrafIcon(icon,label,if(dark) Color.White else Ink,24.dp)
-  }
-  Spacer(Modifier.height(7.dp)); Text(label,color=secondary,fontSize=11.sp,fontWeight=FontWeight.Normal,textAlign=TextAlign.Center)
- }
-}
 @Composable
 private fun ProfilePhotoImage(uri:Uri,modifier:Modifier=Modifier) {
  val context=LocalContext.current
