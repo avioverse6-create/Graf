@@ -21,6 +21,9 @@ jobs:
       - name: Fetch PrismalAGSL source
         run: git clone --depth 1 --branch v1.0.7 https://github.com/styropyr0/PrismalAGSL.git third_party/PrismalAGSL
 
+      - name: Fetch Glasmio source
+        run: git clone --depth 1 https://github.com/NEORUAA/Glasmio.git third_party/Glasmio && cd third_party/Glasmio && git checkout 64b2d00746480c2136a77840cdb849c5505f8b6c
+
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -37,12 +40,12 @@ jobs:
       - name: Install stable Android packages
         run: |
           yes | "$SDKMANAGER" --licenses >/dev/null || true
-          "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;37.0.0"
+          "$SDKMANAGER" "platform-tools" "platforms;android-37.0" "build-tools;37.0.0" "ndk;27.1.12297006" "cmake;3.22.1"
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '9.5.0'
+          gradle-version: '9.6.0'
 
       - name: Download Inter variable font
         run: |
