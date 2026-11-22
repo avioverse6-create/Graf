@@ -663,12 +663,8 @@ private fun ProfileScreen(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     var colorPickerOpen by remember { mutableStateOf(false) }
-    var editOpen by remember { mutableStateOf(false) }
-    var muted by remember { mutableStateOf(false) }
+        var muted by remember { mutableStateOf(false) }
     var selectedSection by remember { mutableIntStateOf(0) }
-    var editName by remember(profileName) { mutableStateOf(profileName) }
-    var editUsername by remember(profileUsername) { mutableStateOf(profileUsername) }
-    var editPhone by remember(profilePhone) { mutableStateOf(profilePhone) }
     val colors = listOf(Color(0xFF8994A5), Color(0xFF1688FF), Color(0xFF8B78D8), Color(0xFF48A99A), Color(0xFFD879A6), Color(0xFFD69A55), Color(0xFF6F8298), Color(0xFFE1E4EA))
     val page = if (dark) Color.Black else Color(0xFFF3F4F7)
     val text = if (dark) Color(0xFFF5F7FC) else Color(0xFF171B24)
@@ -687,11 +683,11 @@ private fun ProfileScreen(
                     Spacer(Modifier.height(10.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         GlasmioIconButton(onClick = onBack, size = 42.dp) {
-                            Icon(Icons.Rounded.ArrowBack, "Назад", tint = text, modifier = Modifier.size(21.dp))
+                            Icon(Icons.Rounded.ChevronLeft, "Назад", tint = text, modifier = Modifier.size(29.dp))
                         }
                         Spacer(Modifier.weight(1f))
                         GlasmioMenu(
-                            expanded = menuExpanded, onExpandedChange = { menuExpanded = it }, itemCount = 3,
+                            expanded = menuExpanded, onExpandedChange = { menuExpanded = it }, itemCount = 1,
                             anchor = { open ->
                                 GlasmioIconButton(onClick = open, size = 42.dp) {
                                     Icon(Icons.Rounded.MoreVert, "Меню профиля", tint = text, modifier = Modifier.size(21.dp))
@@ -699,8 +695,6 @@ private fun ProfileScreen(
                             },
                         ) { menuBackdrop, close ->
                             GlasmioMenuItem(title = "Цвета профиля", onClick = { colorPickerOpen = !colorPickerOpen; close() }, systemName = "paintpalette", backdrop = menuBackdrop, enabled = true)
-                            GlasmioMenuItem(title = "Изменить", onClick = { editOpen = true; close() }, systemName = "pencil", backdrop = menuBackdrop, enabled = true)
-                            GlasmioMenuItem(title = "Юзернейм", onClick = close, systemName = "at", backdrop = menuBackdrop, enabled = false)
                         }
                     }
 
@@ -722,35 +716,9 @@ private fun ProfileScreen(
                         }
                     }
 
-                    AnimatedVisibility(editOpen, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
-                        GlassSurface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
-                            navigationSurfaceColor = profileColor.copy(alpha = .12f),
-                        ) {
-                            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
-                                Text("Изменить профиль", color = text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                                ProfileEditField("Имя", editName, { editName = it }, text, mutedText)
-                                ProfileEditField("Юзернейм", editUsername, { editUsername = it.removePrefix("@").filter { ch -> ch.isLetterOrDigit() || ch == '_' } }, text, mutedText, "@")
-                                ProfileEditField("Номер", editPhone, { editPhone = it }, text, mutedText)
-                                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                                    GlasmioButton(onClick = { editOpen = false }, modifier = Modifier.weight(1f)) {
-                                        Text("Отмена", color = text, fontSize = 12.sp, modifier = Modifier.padding(9.dp))
-                                    }
-                                    GlasmioButton(onClick = {
-                                        onSaveProfile(editName.trim().ifBlank { profileName }, editUsername.trim().ifBlank { profileUsername }, editPhone.trim().ifBlank { profilePhone })
-                                        editOpen = false
-                                    }, modifier = Modifier.weight(1f), navigationSurfaceColor = profileColor.copy(alpha = .22f)) {
-                                        Text("Сохранить", color = text, fontSize = 12.sp, modifier = Modifier.padding(9.dp))
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     Spacer(Modifier.height(12.dp))
                     Box(
-                        Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp))
+                        Modifier.requiredWidth(LocalConfiguration.current.screenWidthDp.dp).offset(x = (-18).dp)
                             .background(Brush.verticalGradient(listOf(profileColor.copy(alpha = if (dark) .48f else .34f), profileColor.copy(alpha = if (dark) .24f else .16f), page))),
                         contentAlignment = Alignment.Center,
                     ) {
@@ -775,6 +743,13 @@ private fun ProfileScreen(
                             Text(profileName, color = text, fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                             Spacer(Modifier.height(3.dp))
                             Text("@$profileUsername", color = Blue, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                            Spacer(Modifier.height(16.dp))
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Top) {
+                                ProfileGlasmioAction(Icons.Rounded.PhotoCamera, "Фото", text, mutedText, onPhoto)
+                                ProfileGlasmioAction(Icons.Rounded.Edit, "Изменить", text, mutedText, { })
+                                ProfileGlasmioAction(Icons.Rounded.Settings, "Настройки", text, mutedText, onOpenSettings)
+                                ProfileGlasmioAction(if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications, "Беззвучно", text, mutedText, { muted = !muted })
+                            }
                         }
                     }
 
@@ -797,21 +772,12 @@ private fun ProfileScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(15.dp))
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Top) {
-                        ProfileGlasmioAction(Icons.Rounded.PhotoCamera, "Фото", text, mutedText, onPhoto)
-                        ProfileGlasmioAction(Icons.Rounded.Edit, "Изменить", text, mutedText, { editOpen = true })
-                        ProfileGlasmioAction(Icons.Rounded.Settings, "Настройки", text, mutedText, onOpenSettings)
-                        ProfileGlasmioAction(if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications, "Беззвучно", text, mutedText, { muted = !muted })
-                    }
-
                     Spacer(Modifier.height(16.dp))
-                    GlassSurface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(25.dp),
-                        navigationSurfaceColor = profileColor.copy(alpha = .12f),
+                    Box(
+                        Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp))
+                            .background(if (dark) Color(0xFF17191E) else Color(0xFFE5E7EB)),
                     ) {
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 17.dp)) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp)) {
                             ProfileDataRow("Номер", profilePhone, text, mutedText)
                             Spacer(Modifier.height(13.dp))
                             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -820,8 +786,6 @@ private fun ProfileScreen(
                             }
                             Spacer(Modifier.height(13.dp))
                             ProfileDataRow("Адрес", "0-27-14", text, mutedText)
-                            Spacer(Modifier.height(12.dp))
-                            ProfileAddressMap(dark, profileColor)
                         }
                     }
 
@@ -915,7 +879,7 @@ private fun ProfileDataRow(title: String, value: String, foreground: Color, seco
 private fun ProfileGlasmioAction(icon: ImageVector, label: String, foreground: Color, secondary: Color, onClick: () -> Unit) {
     Column(Modifier.width(68.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         GlasmioIconButton(onClick = onClick, size = 50.dp) {
-            Icon(imageVector = icon, contentDescription = label, tint = foreground, modifier = Modifier.size(21.dp))
+            GrafIcon(icon, label, foreground, 21.dp)
         }
         Spacer(Modifier.height(5.dp))
         Text(label, color = secondary, fontSize = 9.sp, textAlign = TextAlign.Center, maxLines = 1)
