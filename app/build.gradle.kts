@@ -11,7 +11,7 @@ android {
 
     defaultConfig {
         applicationId = "com.graf.messenger"
-        minSdk = 25
+        minSdk = 33
         targetSdk = 36
         versionCode = 21
         versionName = "0.1.20"
@@ -20,7 +20,7 @@ android {
     buildFeatures { compose = true }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
         targetCompatibility = JavaVersion.VERSION_17
     }
 }
