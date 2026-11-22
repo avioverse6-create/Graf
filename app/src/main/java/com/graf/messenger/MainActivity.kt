@@ -103,6 +103,7 @@ import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.VolumeOff
 import io.github.neoruaa.glasmio.core.GlasmioTheme
 import io.github.neoruaa.glasmio.glass.GlasmioBackdropHost
+import io.github.neoruaa.glasmio.glass.GlassSurface
 import io.github.neoruaa.glasmio.ui.GlasmioButton
 import io.github.neoruaa.glasmio.ui.GlasmioIconButton
 import io.github.neoruaa.glasmio.ui.GlasmioMenu
@@ -800,8 +801,11 @@ private fun ProfileScreen(
                     }
 
                     Spacer(Modifier.height(16.dp))
-                    GlasmioButton(onClick = { }) {
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 9.dp)) {
+                    GlassSurface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
+                    ) {
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 13.dp)) {
                             ProfileDataRow("Номер", "+1488 1234 8922", foreground, secondary)
                             Spacer(Modifier.height(8.dp))
                             ProfileDataRow("Юз", "@pidor", foreground, secondary)
@@ -811,7 +815,10 @@ private fun ProfileScreen(
                     }
 
                     Spacer(Modifier.height(16.dp))
-                    GlasmioButton(onClick = { }) {
+                    GlassSurface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = androidx.compose.foundation.shape.CircleShape,
+                    ) {
                         Row(
                             Modifier.fillMaxWidth().padding(5.dp),
                             verticalAlignment = Alignment.CenterVertically,
@@ -873,7 +880,7 @@ private fun ProfileGlasmioAction(
 private fun ProfilePhotoImage(uri:Uri,modifier:Modifier=Modifier) {
  val context=LocalContext.current
  val bitmap=remember(uri) { runCatching { context.contentResolver.openInputStream(uri)?.use { BitmapFactory.decodeStream(it)?.asImageBitmap() } }.getOrNull() }
- if(bitmap!=null) Image(bitmap,contentDescription="Profile photo",modifier=modifier)
+ if(bitmap!=null) Image(bitmap,contentDescription="Profile photo",modifier=modifier,contentScale=androidx.compose.ui.layout.ContentScale.Crop)
 }
 @Composable
 private fun ProfilePhotoViewer(uri:Uri,dark:Boolean,onClose:()->Unit) {
