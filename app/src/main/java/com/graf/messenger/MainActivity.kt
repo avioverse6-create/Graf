@@ -180,6 +180,14 @@ private fun GrafApp() {
  var profileTheme by remember { mutableIntStateOf(prefs.getInt("profile_theme",1)) }
  var selectedTab by remember { mutableIntStateOf(0) }
  var settingsOpen by remember { mutableStateOf(false) }
+ val activity = context as? ComponentActivity
+ SideEffect {
+  val baseFlags = android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+   android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+   android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+  activity?.window?.decorView?.systemUiVisibility =
+   baseFlags or if (selectedTab == 3 && !settingsOpen && !channelOpen) android.view.View.SYSTEM_UI_FLAG_FULLSCREEN else 0
+ }
  var profileName by remember { mutableStateOf(prefs.getString("profile_name","Alicia Brown") ?: "Alicia Brown") }
  var profileUsername by remember { mutableStateOf(prefs.getString("profile_username","username") ?: "username") }
  var profilePhone by remember { mutableStateOf(prefs.getString("profile_phone","+1488 1234 8922") ?: "+1488 1234 8922") }
@@ -217,7 +225,7 @@ private fun GrafApp() {
   Box(Modifier.fillMaxSize()) {
    Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
     Column(Modifier.fillMaxSize()) {
-     Spacer(Modifier.height(48.dp))
+     Spacer(Modifier.height(if (selectedTab == 3 && !settingsOpen && !channelOpen) 0.dp else 48.dp))
      AnimatedContent(targetState=Pair(channelOpen,selectedTab),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
       when {
        state.first -> ChannelScreen(dark,foreground,secondary) { channelOpen=false }
