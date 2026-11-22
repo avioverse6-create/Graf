@@ -797,10 +797,18 @@ private fun ProfileScreen(
                                     Text(trackTitle, color = text, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
-                            Canvas(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 5.dp)) {
-                                val y = size.height - 2.dp.toPx()
-                                drawLine(Color.White.copy(alpha = .22f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx(), cap = StrokeCap.Round)
-                                if (trackProgress > 0f) drawLine(Color.White.copy(alpha = .95f), Offset(0f, y), Offset(size.width * trackProgress, y), 2.dp.toPx(), cap = StrokeCap.Round)
+                            Canvas(Modifier.fillMaxSize()) {
+                                // A low-opacity full-height fill travels across the entire capsule with playback.
+                                if (trackProgress > 0f) {
+                                    drawRoundRect(
+                                        color = Color.White.copy(alpha = .16f),
+                                        topLeft = Offset.Zero,
+                                        size = androidx.compose.ui.geometry.Size(size.width * trackProgress, size.height),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2f, size.height / 2f),
+                                    )
+                                }
+                                val y = size.height - 5.dp.toPx()
+                                drawLine(Color.White.copy(alpha = .16f), Offset(18.dp.toPx(), y), Offset(size.width - 18.dp.toPx(), y), 1.dp.toPx(), cap = StrokeCap.Round)
                             }
                         }
                         GlasmioButton(onClick = { }, modifier = Modifier.weight(1f), navigationSurfaceColor = glassTone, emphasis = GlassEmphasis.Prominent) {
