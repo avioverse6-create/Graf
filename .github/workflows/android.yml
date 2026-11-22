@@ -19,7 +19,9 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Fetch PrismalAGSL source
-        run: git clone --depth 1 --branch v1.0.7 https://github.com/styropyr0/PrismalAGSL.git third_party/PrismalAGSL
+        run: |
+          git clone --depth 1 --branch v1.0.7 https://github.com/styropyr0/PrismalAGSL.git third_party/PrismalAGSL
+          sed -i 's/agp = "9.3.1"/agp = "9.4.1"/; s/kotlin = "2.2.21"/kotlin = "2.4.21"/; s/composeBom = "2026.06.01"/composeBom = "2026.09.00"/' third_party/PrismalAGSL/gradle/libs.versions.toml
 
       - name: Fetch Glasmio source
         run: git clone --depth 1 https://github.com/NEORUAA/Glasmio.git third_party/Glasmio && cd third_party/Glasmio && git checkout 64b2d00746480c2136a77840cdb849c5505f8b6c
