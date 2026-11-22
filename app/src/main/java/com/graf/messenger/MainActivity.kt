@@ -698,9 +698,9 @@ private fun ProfileScreen(
                                 }
                             },
                         ) { menuBackdrop, close ->
-                            GlasmioMenuItem("Цвета профиля", { colorPickerOpen = !colorPickerOpen; close() }, "paintpalette", menuBackdrop, true)
-                            GlasmioMenuItem("Изменить", { editOpen = true; close() }, "pencil", menuBackdrop, true)
-                            GlasmioMenuItem("Юзернейм", close, "at", menuBackdrop, false)
+                            GlasmioMenuItem(title = "Цвета профиля", onClick = { colorPickerOpen = !colorPickerOpen; close() }, systemName = "paintpalette", backdrop = menuBackdrop, enabled = true)
+                            GlasmioMenuItem(title = "Изменить", onClick = { editOpen = true; close() }, systemName = "pencil", backdrop = menuBackdrop, enabled = true)
+                            GlasmioMenuItem(title = "Юзернейм", onClick = close, systemName = "at", backdrop = menuBackdrop, enabled = false)
                         }
                     }
 
