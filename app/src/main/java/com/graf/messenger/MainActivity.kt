@@ -787,19 +787,13 @@ private fun ProfileScreen(
                             Text(profileName, color = text, fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
                             Spacer(Modifier.height(3.dp))
                             Text("@$profileUsername", color = Blue, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
-                            Spacer(Modifier.height(16.dp))
-                            Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Top) {
-                                ProfileGlasmioAction(Icons.Rounded.PhotoCamera, "Фото", text, mutedText, glassTone, onPhoto)
-                                ProfileGlasmioAction(Icons.Rounded.Edit, "Изменить", text, mutedText, glassTone, { })
-                                ProfileGlasmioAction(Icons.Rounded.Settings, "Настройки", text, mutedText, glassTone, onOpenSettings)
-                                ProfileGlasmioAction(if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications, "Беззвучно", text, mutedText, glassTone, { muted = !muted })
-                            }
+                            Spacer(Modifier.height(4.dp))
                         }
                     }
 
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(7.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.weight(1.45f).height(50.dp)) {
+                        Box(Modifier.weight(1.45f).height(40.dp)) {
                             GlasmioButton(
                                 onClick = {
                                     if (trackUri == null) audioPicker.launch(arrayOf("audio/*"))
@@ -837,6 +831,13 @@ private fun ProfileScreen(
                         }
                     }
 
+                    Spacer(Modifier.height(9.dp))
+                    Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Top) {
+                        ProfileGlasmioAction(Icons.Rounded.PhotoCamera, "Фото", text, mutedText, glassTone, onPhoto)
+                        ProfileGlasmioAction(Icons.Rounded.Edit, "Изменить", text, mutedText, glassTone, { menuExpanded = true })
+                        ProfileGlasmioAction(Icons.Rounded.Settings, "Настройки", text, mutedText, glassTone, onOpenSettings)
+                        ProfileGlasmioAction(if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications, "Беззвучно", text, mutedText, glassTone, { muted = !muted })
+                    }
                     Spacer(Modifier.height(16.dp))
                     Box(
                         Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(25.dp))
@@ -862,45 +863,6 @@ private fun ProfileScreen(
                 }
             },
         )
-    }
-}
-
-@Composable
-private fun TelegramNftGallery(surface: Color, foreground: Color, secondary: Color) {
-    val context = LocalContext.current
-    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
-        TelegramNftItems.chunked(3).forEach { rowItems ->
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                rowItems.forEach { item ->
-                    Column(
-                        Modifier.weight(1f)
-                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                            .background(surface)
-                            .border(1.dp, Color.White.copy(alpha = .12f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
-                            .clickable {
-                                runCatching {
-                                    context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(item.telegramUrl)))
-                                }
-                            }
-                            .padding(7.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        AsyncImage(
-                            model = item.imageUrl,
-                            contentDescription = item.name,
-                            modifier = Modifier.fillMaxWidth().aspectRatio(1f)
-                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
-                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        )
-                        Spacer(Modifier.height(6.dp))
-                        Text(item.name, color = foreground, fontSize = 9.sp, fontWeight = FontWeight.SemiBold,
-                            maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
-                        Text("#1 · Telegram NFT", color = secondary, fontSize = 8.sp, maxLines = 1)
-                    }
-                }
-                repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
-            }
-        }
     }
 }
 
