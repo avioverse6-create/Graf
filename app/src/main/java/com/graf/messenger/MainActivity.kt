@@ -808,36 +808,43 @@ private fun ProfileScreen(
 
                     Spacer(Modifier.height(7.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.weight(1.45f).height(40.dp)) {
-                            GlasmioButton(
-                                onClick = {
+                        Box(
+                            Modifier.weight(1.45f).height(40.dp).clip(CircleShape)
+                                .background(glassTone)
+                                .border(1.dp, Color.White.copy(alpha = if (dark) .20f else .55f), CircleShape)
+                                .clickable {
                                     if (trackUri == null) audioPicker.launch(arrayOf("audio/*"))
-                                    else runCatching { if (player.isPlaying) { player.pause(); trackPlaying = false } else { player.start(); trackPlaying = true } }
+                                    else runCatching {
+                                        if (player.isPlaying) { player.pause(); trackPlaying = false }
+                                        else { player.start(); trackPlaying = true }
+                                    }
                                 },
-                                modifier = Modifier.fillMaxSize(), navigationSurfaceColor = glassTone, emphasis = GlassEmphasis.Regular,
-                            ) {
-                                Row(Modifier.fillMaxWidth().padding(horizontal = 7.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Icon(Icons.Rounded.MusicNote, null, tint = text, modifier = Modifier.size(16.dp))
-                                    Spacer(Modifier.width(5.dp))
-                                    Text(trackTitle, color = text, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                                }
-                            }
+                            contentAlignment = Alignment.CenterStart
+                        ) {
                             Canvas(Modifier.fillMaxSize()) {
-                                // A low-opacity full-height fill travels across the entire capsule with playback.
                                 if (trackProgress > 0f) {
                                     drawRoundRect(
-                                        color = Color.White.copy(alpha = .16f),
+                                        color = Color.White.copy(alpha = .19f),
                                         topLeft = Offset.Zero,
                                         size = androidx.compose.ui.geometry.Size(size.width * trackProgress, size.height),
-                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2f, size.height / 2f),
+                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2f, size.height / 2f)
                                     )
                                 }
-                                val y = size.height - 5.dp.toPx()
-                                drawLine(Color.White.copy(alpha = .16f), Offset(18.dp.toPx(), y), Offset(size.width - 18.dp.toPx(), y), 1.dp.toPx(), cap = StrokeCap.Round)
+                            }
+                            Row(Modifier.fillMaxWidth().padding(horizontal = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.MusicNote, null, tint = text, modifier = Modifier.size(15.dp))
+                                Spacer(Modifier.width(6.dp))
+                                Text(trackTitle, color = text, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
-                        GlasmioButton(onClick = { }, modifier = Modifier.weight(1f), navigationSurfaceColor = glassTone, emphasis = GlassEmphasis.Regular) {
-                            Row(Modifier.padding(horizontal = 7.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Box(
+                            Modifier.weight(1f).height(40.dp).clip(CircleShape)
+                                .background(glassTone)
+                                .border(1.dp, Color.White.copy(alpha = if (dark) .20f else .55f), CircleShape)
+                                .clickable { },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(Modifier.padding(horizontal = 9.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text("Баланс", color = mutedText, fontSize = 10.sp)
                                 Spacer(Modifier.width(5.dp))
                                 Text("◆ 0.29", color = text, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
