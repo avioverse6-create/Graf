@@ -684,6 +684,7 @@ private fun ProfileScreen(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(false) }
+    var selectedSection by remember { mutableIntStateOf(0) }
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("graf_prefs", 0) }
     var trackUri by remember { mutableStateOf(prefs.getString("profile_track_uri", null)?.let(Uri::parse)) }
@@ -821,9 +822,9 @@ private fun ProfileScreen(
                         }
                     }
                     Spacer(Modifier.height(16.dp))
-                    ProfileSectionsBar(selected = 0, onSelected = {}, dark = dark, foreground = text, secondary = mutedText, accent = glassTone)
+                    ProfileSectionsBar(selected = selectedSection, onSelected = { selectedSection = it }, dark = dark, foreground = text, secondary = mutedText, accent = glassTone)
                     Spacer(Modifier.height(8.dp))
-                    Text("No gifts yet", color = mutedText.copy(alpha = .82f), fontSize = 11.sp)
+                    Text(if (selectedSection == 0) "No gifts yet" else "No stories yet", color = mutedText.copy(alpha = .82f), fontSize = 11.sp)
                 }
             },
         )
@@ -893,10 +894,10 @@ private fun ProfileSectionsBar(selected: Int, onSelected: (Int) -> Unit, dark: B
             )
             Row(Modifier.fillMaxWidth().height(26.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f).fillMaxHeight().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onSelected(0) }, contentAlignment = Alignment.Center) {
-                    Text("Подарки", color = if (selected == 0) foreground else secondary, fontSize = 9.sp, maxLines = 1)
+                    Text("Gifts", color = if (selected == 0) foreground else secondary, fontSize = 9.sp, maxLines = 1)
                 }
                 Box(Modifier.weight(1f).fillMaxHeight().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onSelected(1) }, contentAlignment = Alignment.Center) {
-                    Text("Истории", color = if (selected == 1) foreground else secondary, fontSize = 9.sp, maxLines = 1)
+                    Text("Stories", color = if (selected == 1) foreground else secondary, fontSize = 9.sp, maxLines = 1)
                 }
             }
         }
@@ -906,7 +907,7 @@ private fun ProfileSectionsBar(selected: Int, onSelected: (Int) -> Unit, dark: B
 @Composable
 private fun ProfileDataRow(title: String, value: String, foreground: Color, secondary: Color) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = secondary, fontSize = 12.sp, modifier = Modifier.width(66.dp))
+        Text(title, color = secondary, fontSize = 12.sp, modifier = Modifier.width(78.dp))
         Text(value, color = foreground, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
