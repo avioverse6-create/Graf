@@ -68,7 +68,6 @@ import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Person
 import androidx.compose.material.icons.rounded.MoreHoriz
-import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.material.icons.rounded.Tune
@@ -97,10 +96,7 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.foundation.gestures.detectVerticalDragGestures
 import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.VolumeOff
 import io.github.neoruaa.glasmio.core.GlasmioTheme
@@ -680,8 +676,6 @@ private fun ProfileScreen(
                     ) {
                         GlasmioButton(
                             onClick = { },
-                            size = io.github.neoruaa.glasmio.ui.GlasmioButtonSize.Medium,
-                            modifier = Modifier.height(42.dp),
                         ) {
                             Text("Edit", color = foreground, fontSize = 15.sp)
                         }
@@ -862,7 +856,7 @@ private fun ProfilePhotoViewer(uri:Uri,dark:Boolean,onClose:()->Unit) {
  Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.97f)).pointerInput(Unit) {
   detectVerticalDragGestures(onVerticalDrag={_,amount->drag+=amount},onDragEnd={if(drag>90f) onClose();drag=0f})
  },contentAlignment=Alignment.Center) {
-  ProfilePhotoImage(uri,Modifier.fillMaxWidth().aspectRatio(1f))
+  ProfilePhotoImage(uri,Modifier.fillMaxSize().padding(18.dp))
   Box(Modifier.align(Alignment.TopEnd).padding(22.dp).size(44.dp).clip(CircleShape).background(Color.White.copy(alpha=.18f)).clickable(onClick=onClose),contentAlignment=Alignment.Center) { GrafIcon(Icons.Rounded.Close,"Close",Color.White,22.dp) }
  }
 }
