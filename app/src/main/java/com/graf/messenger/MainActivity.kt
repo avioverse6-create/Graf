@@ -710,8 +710,8 @@ private fun ProfileScreen(
         }.onFailure { trackPlaying = false }
     }
     DisposableEffect(player) { onDispose { runCatching { player.release() } } }
-    LaunchedEffect(trackUri) {
-        trackUri?.let { savedUri -> runCatching { player.reset(); player.setDataSource(context, savedUri); player.prepare() } }
+    LaunchedEffect(Unit) {
+        trackUri?.let { savedUri -> runCatching { player.setDataSource(context, savedUri); player.prepare() } }
     }
     LaunchedEffect(trackPlaying, trackUri) {
         while (trackPlaying) {
