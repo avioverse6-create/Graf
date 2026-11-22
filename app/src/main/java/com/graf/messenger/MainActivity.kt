@@ -1053,6 +1053,7 @@ private fun ProfilePhotoViewer(uri:Uri,dark:Boolean,onClose:()->Unit) {
  var muted by remember { mutableStateOf(false) }
  val text = Color.White
  val secondary = Color.White.copy(alpha = .78f)
+  val surfaceColor = if (dark) Color(0xFF202326) else Color(0xFFB0B5B9)
  GlasmioTheme(isDark = dark) {
   GlasmioBackdropHost(
    modifier = Modifier.fillMaxSize(),
@@ -1063,10 +1064,10 @@ private fun ProfilePhotoViewer(uri:Uri,dark:Boolean,onClose:()->Unit) {
       GrafIcon(Icons.Rounded.Close,"Закрыть",text,22.dp)
      }
      Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=18.dp, vertical=34.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.Top) {
-      ProfileGlasmioAction(Icons.Rounded.PhotoCamera,"Фото",text,secondary,onClose)
-      ProfileGlasmioAction(Icons.Rounded.Edit,"Изменить",text,secondary,onClose)
-      ProfileGlasmioAction(Icons.Rounded.Settings,"Настройки",text,secondary,onClose)
-      ProfileGlasmioAction(if(muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications,"Беззвучно",text,secondary,{muted=!muted})
+      ProfileGlasmioAction(Icons.Rounded.PhotoCamera,"Фото",text,secondary,surfaceColor,onClose)
+      ProfileGlasmioAction(Icons.Rounded.Edit,"Изменить",text,secondary,surfaceColor,onClose)
+      ProfileGlasmioAction(Icons.Rounded.Settings,"Настройки",text,secondary,surfaceColor,onClose)
+      ProfileGlasmioAction(if(muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications,"Беззвучно",text,secondary,surfaceColor,{muted=!muted})
      }
     }
    }
