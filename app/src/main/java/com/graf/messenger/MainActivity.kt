@@ -768,14 +768,14 @@ private fun ProfileScreen(
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalAlignment = Alignment.CenterVertically,
                     ) {
-                        GlasmioButton(onClick = { }, modifier = Modifier.weight(1.45f)) {
+                        GlasmioButton(onClick = { }, modifier = Modifier.weight(1.45f), navigationSurfaceColor = profileColor.copy(alpha = .14f)) {
                             Row(Modifier.padding(horizontal = 7.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Icon(Icons.Rounded.MusicNote, null, tint = foreground, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(5.dp))
                                 Text("Метель — PLOHOYPAREN", color = foreground, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
-                        GlasmioButton(onClick = { }, modifier = Modifier.weight(1f)) {
+                        GlasmioButton(onClick = { }, modifier = Modifier.weight(1f), navigationSurfaceColor = profileColor.copy(alpha = .14f)) {
                             Row(Modifier.padding(horizontal = 7.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text("Баланс", color = secondary, fontSize = 10.sp)
                                 Spacer(Modifier.width(5.dp))
@@ -804,6 +804,7 @@ private fun ProfileScreen(
                     GlassSurface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
+                        navigationSurfaceColor = profileColor.copy(alpha = .12f),
                     ) {
                         Column(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 13.dp)) {
                             ProfileDataRow("Номер", "+1488 1234 8922", foreground, secondary)
@@ -818,6 +819,7 @@ private fun ProfileScreen(
                     GlassSurface(
                         modifier = Modifier.fillMaxWidth(),
                         shape = androidx.compose.foundation.shape.CircleShape,
+                        navigationSurfaceColor = profileColor.copy(alpha = .12f),
                     ) {
                         Row(
                             Modifier.fillMaxWidth().padding(5.dp),
