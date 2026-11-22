@@ -246,7 +246,7 @@ private fun GrafApp() {
    }
    if(!channelOpen) {
     PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it;settingsOpen=false},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
-     modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=8.dp).fillMaxWidth().border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha=.58f), Color.White.copy(alpha=.10f), Color.White.copy(alpha=.34f))), CircleShape)) {
+     modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=8.dp).fillMaxWidth()) {
       GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index;settingsOpen=false } }
     }
    }
@@ -725,22 +725,14 @@ private fun ProfileScreen(
                 ) {
                     Spacer(Modifier.height(10.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        GlasmioIconButton(
-                            onClick = onBack, size = 46.dp, emphasis = GlassEmphasis.Prominent,
-                            navigationSurfaceColor = glassTone, modifier = Modifier.border(1.dp, rim, CircleShape),
-                            sampleBackdrop = true,
-                        ) {
+                        GlasmioIconButton(onClick = onBack, size = 42.dp) {
                             Icon(Icons.Rounded.ChevronLeft, "Назад", tint = text, modifier = Modifier.size(29.dp))
                         }
                         Spacer(Modifier.weight(1f))
                         GlasmioMenu(
                             expanded = menuExpanded, onExpandedChange = { menuExpanded = it }, itemCount = 1,
                             anchor = { open ->
-                                GlasmioIconButton(
-                                    onClick = open, size = 46.dp, emphasis = GlassEmphasis.Prominent,
-                                    navigationSurfaceColor = glassTone, modifier = Modifier.border(1.dp, rim, CircleShape),
-                                    sampleBackdrop = true,
-                                ) {
+                                GlasmioIconButton(onClick = open, size = 42.dp) {
                                     Icon(Icons.Rounded.MoreVert, "Меню профиля", tint = text, modifier = Modifier.size(21.dp))
                                 }
                             },
@@ -887,25 +879,31 @@ private fun ProfileAddressMap(dark: Boolean, accent: Color) {
 
 @Composable
 private fun ProfileSectionsBar(selected: Int, onSelected: (Int) -> Unit, dark: Boolean, foreground: Color, secondary: Color, accent: Color) {
-    GlassSurface(modifier = Modifier.fillMaxWidth(.68f), shape = CircleShape, navigationSurfaceColor = accent.copy(alpha = if (dark) .24f else .42f)) {
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(3.dp)) {
+    // A single compact Glasmio surface; the active half is only a soft fill,
+    // avoiding the stacked outlines/glass layers from the previous version.
+    GlassSurface(
+        modifier = Modifier.fillMaxWidth(.58f),
+        shape = CircleShape,
+        navigationSurfaceColor = if (dark) Color.White.copy(alpha = .055f) else Color.Black.copy(alpha = .025f),
+    ) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(2.dp)) {
             val half = maxWidth / 2
             val offset by androidx.compose.animation.core.animateDpAsState(
                 targetValue = if (selected == 0) 0.dp else half,
                 animationSpec = spring(dampingRatio = .72f, stiffness = 420f),
                 label = "profile-section-indicator",
             )
-            GlassSurface(
-                modifier = Modifier.offset(x = offset).width(half).height(31.dp),
-                shape = CircleShape,
-                navigationSurfaceColor = accent.copy(alpha = if (dark) .42f else .58f),
-            ) { }
-            Row(Modifier.fillMaxWidth().height(31.dp), verticalAlignment = Alignment.CenterVertically) {
+            Box(
+                Modifier.offset(x = offset).width(half).height(26.dp)
+                    .clip(CircleShape)
+                    .background(accent.copy(alpha = if (dark) .14f else .10f))
+            )
+            Row(Modifier.fillMaxWidth().height(26.dp), verticalAlignment = Alignment.CenterVertically) {
                 Box(Modifier.weight(1f).fillMaxHeight().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onSelected(0) }, contentAlignment = Alignment.Center) {
-                    Text("Подарки", color = if (selected == 0) foreground else secondary, fontSize = 10.sp)
+                    Text("Подарки", color = if (selected == 0) foreground else secondary, fontSize = 9.sp, maxLines = 1)
                 }
                 Box(Modifier.weight(1f).fillMaxHeight().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onSelected(1) }, contentAlignment = Alignment.Center) {
-                    Text("Истории", color = if (selected == 1) foreground else secondary, fontSize = 10.sp)
+                    Text("Истории", color = if (selected == 1) foreground else secondary, fontSize = 9.sp, maxLines = 1)
                 }
             }
         }
@@ -923,13 +921,8 @@ private fun ProfileDataRow(title: String, value: String, foreground: Color, seco
 @Composable
 private fun ProfileGlasmioAction(icon: ImageVector, label: String, foreground: Color, secondary: Color, onClick: () -> Unit) {
     Column(Modifier.width(68.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        val neutral = if (foreground == Color(0xFFF5F7FC)) Color(0xFF25272B) else Color(0xFFE2E4E7)
-        val rim = Brush.linearGradient(listOf(Color.White.copy(alpha = .68f), Color.White.copy(alpha = .12f), Color.White.copy(alpha = .42f)))
-        GlasmioIconButton(
-            onClick = onClick, size = 56.dp, emphasis = GlassEmphasis.Prominent,
-            navigationSurfaceColor = neutral, modifier = Modifier.border(1.dp, rim, CircleShape),
-            sampleBackdrop = true,
-        ) {
+        // Use Glasmio's built-in button surface, rim and interaction treatment.
+        GlasmioIconButton(onClick = onClick, size = 50.dp) {
             GrafIcon(icon, label, foreground, 21.dp)
         }
         Spacer(Modifier.height(5.dp))
@@ -954,7 +947,7 @@ private fun ProfilePhotoViewer(uri:Uri,dark:Boolean,onClose:()->Unit) {
    sampledContent = { ProfilePhotoImage(uri, Modifier.fillMaxSize()) },
    overlayContent = {
     Box(Modifier.fillMaxSize()) {
-     GlasmioIconButton(onClick=onClose,size=46.dp,emphasis=GlassEmphasis.Prominent,navigationSurfaceColor=Color(0xFF25272B),modifier=Modifier.align(Alignment.TopEnd).padding(22.dp).border(1.dp,Brush.linearGradient(listOf(Color.White.copy(alpha=.7f),Color.White.copy(alpha=.12f))),CircleShape)) {
+     GlasmioIconButton(onClick=onClose,size=42.dp,modifier=Modifier.align(Alignment.TopEnd).padding(22.dp)) {
       GrafIcon(Icons.Rounded.Close,"Закрыть",text,22.dp)
      }
      Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=18.dp, vertical=34.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.Top) {
