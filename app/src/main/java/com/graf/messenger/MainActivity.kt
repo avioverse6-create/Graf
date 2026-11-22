@@ -238,6 +238,10 @@ private fun GrafSettingsCog(active: Boolean, tint: Color) {
         } else progress.snapTo(0f)
     }
     val p = progress.value
+    // Match every other bottom-tab SVG icon to the user's icon-size setting.
+    val iconScale = LocalGrafIconScale.current
+    val iconBold = LocalGrafIconBold.current
+    val configuredSize = 22.dp * iconScale * if (iconBold) 1.035f else 1f
     val rotation = when {
         p < .70f -> 300f * p / .70f
         p < .90f -> 300f + 60f * (p - .70f) / .20f
@@ -249,7 +253,7 @@ private fun GrafSettingsCog(active: Boolean, tint: Color) {
         p < .90f -> .82f + .22f * (p - .70f) / .20f
         else -> 1.04f - .04f * (p - .90f) / .10f
     }
-    Icon(imageVector = GrafSettingsCogIcon, contentDescription = "Settings", tint = tint, modifier = Modifier.size(22.dp).graphicsLayer {
+    Icon(imageVector = GrafSettingsCogIcon, contentDescription = "Settings", tint = tint, modifier = Modifier.size(configuredSize).graphicsLayer {
         rotationZ = rotation
         scaleX = scale
         scaleY = scale
