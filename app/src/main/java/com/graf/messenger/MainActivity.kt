@@ -171,7 +171,10 @@ private fun GrafApp() {
  val prefs=remember { context.getSharedPreferences("graf_prefs",0) }
  var dark by remember { mutableStateOf(prefs.getBoolean("dark_theme",true)) }
  var selectedTab by remember { mutableIntStateOf(0) }
- var profileOpen by remember { mutableStateOf(false) }
+ var settingsOpen by remember { mutableStateOf(false) }
+ var profileName by remember { mutableStateOf(prefs.getString("profile_name","Alicia Brown") ?: "Alicia Brown") }
+ var profileUsername by remember { mutableStateOf(prefs.getString("profile_username","username") ?: "username") }
+ var profilePhone by remember { mutableStateOf(prefs.getString("profile_phone","+1488 1234 8922") ?: "+1488 1234 8922") }
  var channelOpen by remember { mutableStateOf(false) }
  var photoViewer by remember { mutableStateOf(false) }
  var query by remember { mutableStateOf("") }
@@ -210,8 +213,8 @@ private fun GrafApp() {
      AnimatedContent(targetState=Pair(channelOpen,selectedTab),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
       when {
        state.first -> ChannelScreen(dark,foreground,secondary) { channelOpen=false }
-       state.second==3 && !profileOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,iconScale,iconBold,
-        onBack={selectedTab=0},onProfileClick={profileOpen=true},onThemeChange={dark=it;prefs.edit().putBoolean("dark_theme",it).apply()},
+       state.second==3 && settingsOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,iconScale,iconBold,
+        onBack={settingsOpen=false},onProfileClick={settingsOpen=false},onThemeChange={dark=it;prefs.edit().putBoolean("dark_theme",it).apply()},
         onScaleChange={textScale=it;prefs.edit().putFloat("text_scale",it).apply()},
         onBoldChange={boldText=it;prefs.edit().putBoolean("bold_text",it).apply()},
         onIconScaleChange={iconScale=it;prefs.edit().putFloat("icon_scale",it).apply()},
@@ -223,16 +226,19 @@ private fun GrafApp() {
         GrafTab.Contact -> ContactsScreen(dark,foreground,secondary)
         GrafTab.Search -> SearchScreen(query,{query=it},dark,foreground,secondary) { channelOpen=false }
         GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,
-         onBack={profileOpen=false},onPhoto={photoPicker.launch(arrayOf("image/*"))},
+         onBack={selectedTab=0},onOpenSettings={settingsOpen=true},onPhoto={photoPicker.launch(arrayOf("image/*"))},
          onViewPhoto={if(profilePhoto!=null) photoViewer=true else photoPicker.launch(arrayOf("image/*"))},
-         profileColor=Color(profileColor),onProfileColorChange={profileColor=it.toArgb();prefs.edit().putInt("profile_color",profileColor).apply()})
+         profileColor=Color(profileColor),onProfileColorChange={profileColor=it.toArgb();prefs.edit().putInt("profile_color",profileColor).apply()},
+         profileName=profileName,profileUsername=profileUsername,profilePhone=profilePhone,
+         onSaveProfile={name,username,phone -> profileName=name;profileUsername=username;profilePhone=phone
+          prefs.edit().putString("profile_name",name).putString("profile_username",username).putString("profile_phone",phone).apply()})
        }
       }
      }
     }
    }
    if(!channelOpen) {
-    PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it;profileOpen=false},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
+    PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it;settingsOpen=false},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
      modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=8.dp).fillMaxWidth()) {
       GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index;profileOpen=false } }
     }
