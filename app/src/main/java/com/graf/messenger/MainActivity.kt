@@ -2,7 +2,6 @@ package com.graf.messenger
 
 import android.os.Bundle
 import android.content.res.Configuration
-import coil.compose.AsyncImage
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -155,7 +154,10 @@ class MainActivity : ComponentActivity() {
         window.decorView.systemUiVisibility =
             android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
                 android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
+                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         setContent { GrafApp() }
     }
 }
@@ -173,47 +175,6 @@ private enum class GrafTab(val title: String, val icon: ImageVector) {
     Settings("Settings", Icons.Rounded.Settings)
 }
 
-private data class TelegramNftItem(val name: String, val slug: String) {
-    val imageUrl: String get() = "https://nft.fragment.com/gift/$slug-1.medium.jpg"
-    val telegramUrl: String get() = "https://t.me/nft/$slug-1"
-}
-
-// Collection names and slugs are taken from the public Telegram gift catalogue.
-// Each tile opens the corresponding collectible gift page; these are examples,
-// not a claim that the current Graf user owns these NFTs.
-private val TelegramNftItems = listOf(
-    TelegramNftItem("Snoop Dogg", "snoopdogg"),
-    TelegramNftItem("Swag Bag", "swagbag"),
-    TelegramNftItem("Snoop Cigar", "snoopcigar"),
-    TelegramNftItem("Low Rider", "lowrider"),
-    TelegramNftItem("Westside Sign", "westsidesign"),
-    TelegramNftItem("Happy Brownie", "happybrownie"),
-    TelegramNftItem("Spring Basket", "springbasket"),
-    TelegramNftItem("Instant Ramen", "instantramen"),
-    TelegramNftItem("Faith Amulet", "faithamulet"),
-    TelegramNftItem("Mousse Cake", "moussecake"),
-    TelegramNftItem("Ice Cream", "icecream"),
-    TelegramNftItem("Easter Egg", "easteregg"),
-    TelegramNftItem("Stellar Rocket", "stellarrocket"),
-    TelegramNftItem("Artisan Brick", "artisanbrick"),
-    TelegramNftItem("Jack-in-the-Box", "jackinthebox"),
-    TelegramNftItem("Jolly Chimp", "jollychimp"),
-    TelegramNftItem("Moon Pendant", "moonpendant"),
-    TelegramNftItem("Clover Pin", "cloverpin"),
-    TelegramNftItem("Neko Helmet", "nekohelmet"),
-    TelegramNftItem("Ionic Dryer", "ionicdryer"),
-    TelegramNftItem("Whip Cupcake", "whipcupcake"),
-    TelegramNftItem("Mighty Arm", "mightyarm"),
-    TelegramNftItem("Heroic Helmet", "heroichelmet"),
-    TelegramNftItem("Top Hat", "tophat"),
-    TelegramNftItem("Bow Tie", "bowtie"),
-    TelegramNftItem("Light Sword", "lightsword"),
-    TelegramNftItem("Fresh Socks", "freshsocks"),
-    TelegramNftItem("Input Key", "inputkey"),
-    TelegramNftItem("Lush Bouquet", "lushbouquet"),
-    TelegramNftItem("Bonded Ring", "bondedring"),
-)
-
 @Composable
 private fun GrafApp() {
  val context=LocalContext.current
@@ -230,11 +191,13 @@ private fun GrafApp() {
  SideEffect {
   // Draw the app background behind system bars, but keep all interactive content
   // below the status bar on every screen. Never hide the status bar on the profile.
-  val baseFlags = android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-   android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-   android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
   activity?.window?.decorView?.systemUiVisibility =
-   baseFlags or if (!dark) android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR else 0
+   android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+    android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+    android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+    android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
+    android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+    android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
  }
 
  var photoViewer by remember { mutableStateOf(false) }
@@ -269,7 +232,7 @@ private fun GrafApp() {
   LocalGrafIconBold provides iconBold) {
   Box(Modifier.fillMaxSize()) {
    Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
-    Column(Modifier.fillMaxSize().statusBarsPadding()) {
+    Column(Modifier.fillMaxSize().padding(top = 24.dp)) {
      AnimatedContent(targetState=Pair(channelOpen,selectedTab),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
       when {
        state.first -> ChannelScreen(dark,foreground,secondary) { channelOpen=false }
@@ -299,7 +262,7 @@ private fun GrafApp() {
    }
    if(!channelOpen) {
     PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it;settingsOpen=false},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
-     modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=8.dp).fillMaxWidth()) {
+     modifier=Modifier.align(Alignment.BottomCenter).padding(horizontal=20.dp,vertical=10.dp).fillMaxWidth()) {
       GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index;settingsOpen=false } }
     }
    }
@@ -762,7 +725,7 @@ private fun ProfileScreen(
         }
     }
     // One shared surface tone for every profile component, independent of profile background theme.
-    val glassTone = if (dark) Color(0xFF202326) else Color(0xFFB0B5B9)
+    val glassTone = if (dark) Color(0xFF363B42) else Color(0xFFE0E3E7)
     val rim = Brush.linearGradient(listOf(Color.White.copy(alpha = .62f), Color.White.copy(alpha = .12f), Color.White.copy(alpha = .38f)))
     var selectedSection by remember { mutableIntStateOf(0) }
     val colors = listOf(Color(0xFF8994A5), Color(0xFF1688FF), Color(0xFF8B78D8), Color(0xFF48A99A), Color(0xFFD879A6), Color(0xFFD69A55), Color(0xFF6F8298), Color(0xFFE1E4EA))
@@ -777,7 +740,7 @@ private fun ProfileScreen(
             overlayContent = {
                 Column(
                     Modifier.fillMaxSize().background(page).verticalScroll(rememberScrollState())
-                        .padding(horizontal = 18.dp).padding(bottom = 112.dp),
+                        .padding(horizontal = 18.dp).padding(top = 8.dp, bottom = 118.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
                     Spacer(Modifier.height(10.dp))
@@ -892,17 +855,10 @@ private fun ProfileScreen(
                     }
 
                     Spacer(Modifier.height(13.dp))
-                    ProfileSectionsBar(selectedSection, { selectedSection = it }, dark, text, mutedText, glassTone)
-                    Spacer(Modifier.height(10.dp))
-                    if (selectedSection == 0) {
-                        Text("Коллекция Telegram NFT", color = text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                        Spacer(Modifier.height(4.dp))
-                        Text("30 настоящих коллекционных подарков · нажми, чтобы открыть", color = mutedText.copy(alpha = .78f), fontSize = 10.sp)
-                        Spacer(Modifier.height(10.dp))
-                        TelegramNftGallery(glassTone, text, mutedText)
-                    } else {
-                        Text("Историй пока нет", color = mutedText.copy(alpha = .78f), fontSize = 11.sp)
-                    }
+                    Spacer(Modifier.height(15.dp))
+                    Text("Истории", color = text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                    Spacer(Modifier.height(8.dp))
+                    Text("Историй пока нет", color = mutedText.copy(alpha = .78f), fontSize = 11.sp)
                 }
             },
         )
