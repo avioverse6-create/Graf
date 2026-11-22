@@ -180,6 +180,10 @@ private fun GrafApp() {
  var profileTheme by remember { mutableIntStateOf(prefs.getInt("profile_theme",1)) }
  var selectedTab by remember { mutableIntStateOf(0) }
  var settingsOpen by remember { mutableStateOf(false) }
+ var profileName by remember { mutableStateOf(prefs.getString("profile_name","Alicia Brown") ?: "Alicia Brown") }
+ var profileUsername by remember { mutableStateOf(prefs.getString("profile_username","username") ?: "username") }
+ var profilePhone by remember { mutableStateOf(prefs.getString("profile_phone","+1488 1234 8922") ?: "+1488 1234 8922") }
+ var channelOpen by remember { mutableStateOf(false) }
  val activity = context as? ComponentActivity
  SideEffect {
   val baseFlags = android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
@@ -188,10 +192,7 @@ private fun GrafApp() {
   activity?.window?.decorView?.systemUiVisibility =
    baseFlags or if (selectedTab == 3 && !settingsOpen && !channelOpen) android.view.View.SYSTEM_UI_FLAG_FULLSCREEN else 0
  }
- var profileName by remember { mutableStateOf(prefs.getString("profile_name","Alicia Brown") ?: "Alicia Brown") }
- var profileUsername by remember { mutableStateOf(prefs.getString("profile_username","username") ?: "username") }
- var profilePhone by remember { mutableStateOf(prefs.getString("profile_phone","+1488 1234 8922") ?: "+1488 1234 8922") }
- var channelOpen by remember { mutableStateOf(false) }
+
  var photoViewer by remember { mutableStateOf(false) }
  var query by remember { mutableStateOf("") }
  var profilePhoto by remember { mutableStateOf(prefs.getString("profile_photo",null)?.let(Uri::parse)) }
