@@ -13,8 +13,8 @@ android {
         applicationId = "com.graf.messenger"
         minSdk = 25
         targetSdk = 36
-        versionCode = 20
-        versionName = "0.1.19"
+        versionCode = 21
+        versionName = "0.1.20"
     }
 
     buildFeatures { compose = true }
@@ -26,7 +26,7 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.activity:activity-compose:1.13.0")
     implementation("androidx.core:core-ktx:1.19.0")
@@ -38,5 +38,6 @@ dependencies {
     implementation("androidx.compose.material:material")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.github.styropyr0:Prismal:v1.0.7")
+    implementation("io.github.neoruaa.glasmio:glasmio-ui:0.1.4")
     debugImplementation("androidx.compose.ui:ui-tooling")
 }
