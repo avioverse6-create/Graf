@@ -702,7 +702,7 @@ private fun ProfileScreen(
                         GlassSurface(
                             modifier = Modifier.fillMaxWidth(),
                             shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-                            navigationSurfaceColor = profileColor.copy(alpha = .14f),
+                            navigationSurfaceColor = if (dark) Color.White.copy(alpha = .09f) else Color.Black.copy(alpha = .045f),
                         ) {
                             Row(Modifier.fillMaxWidth().padding(11.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                                 colors.forEach { color ->
@@ -842,7 +842,7 @@ private fun ProfileAddressMap(dark: Boolean, accent: Color) {
 
 @Composable
 private fun ProfileSectionsBar(selected: Int, onSelected: (Int) -> Unit, dark: Boolean, foreground: Color, secondary: Color, accent: Color) {
-    GlassSurface(modifier = Modifier.fillMaxWidth(.78f), shape = CircleShape, navigationSurfaceColor = accent.copy(alpha = .13f)) {
+    GlassSurface(modifier = Modifier.fillMaxWidth(.68f), shape = CircleShape, navigationSurfaceColor = if (dark) Color.White.copy(alpha = .075f) else Color.Black.copy(alpha = .035f)) {
         BoxWithConstraints(Modifier.fillMaxWidth().padding(3.dp)) {
             val half = maxWidth / 2
             val offset by androidx.compose.animation.core.animateDpAsState(
@@ -853,13 +853,13 @@ private fun ProfileSectionsBar(selected: Int, onSelected: (Int) -> Unit, dark: B
             GlassSurface(
                 modifier = Modifier.offset(x = offset).width(half).height(31.dp),
                 shape = CircleShape,
-                navigationSurfaceColor = accent.copy(alpha = if (dark) .22f else .16f),
+                navigationSurfaceColor = if (dark) Color.White.copy(alpha = .13f) else Color.Black.copy(alpha = .07f),
             ) { }
             Row(Modifier.fillMaxWidth().height(31.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f).fillMaxHeight().clickable { onSelected(0) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.weight(1f).fillMaxHeight().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onSelected(0) }, contentAlignment = Alignment.Center) {
                     Text("Подарки", color = if (selected == 0) foreground else secondary, fontSize = 10.sp)
                 }
-                Box(Modifier.weight(1f).fillMaxHeight().clickable { onSelected(1) }, contentAlignment = Alignment.Center) {
+                Box(Modifier.weight(1f).fillMaxHeight().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onSelected(1) }, contentAlignment = Alignment.Center) {
                     Text("Истории", color = if (selected == 1) foreground else secondary, fontSize = 10.sp)
                 }
             }
