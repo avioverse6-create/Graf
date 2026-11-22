@@ -186,11 +186,13 @@ private fun GrafApp() {
  var channelOpen by remember { mutableStateOf(false) }
  val activity = context as? ComponentActivity
  SideEffect {
+  // Draw the app background behind system bars, but keep all interactive content
+  // below the status bar on every screen. Never hide the status bar on the profile.
   val baseFlags = android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
    android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
    android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
   activity?.window?.decorView?.systemUiVisibility =
-   baseFlags or if (selectedTab == 3 && !settingsOpen && !channelOpen) android.view.View.SYSTEM_UI_FLAG_FULLSCREEN else 0
+   baseFlags or if (!dark) android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR else 0
  }
 
  var photoViewer by remember { mutableStateOf(false) }
@@ -225,8 +227,7 @@ private fun GrafApp() {
   LocalGrafIconBold provides iconBold) {
   Box(Modifier.fillMaxSize()) {
    Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
-    Column(Modifier.fillMaxSize()) {
-     Spacer(Modifier.height(if (selectedTab == 3 && !settingsOpen && !channelOpen) 0.dp else 48.dp))
+    Column(Modifier.fillMaxSize().statusBarsPadding()) {
      AnimatedContent(targetState=Pair(channelOpen,selectedTab),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
       when {
        state.first -> ChannelScreen(dark,foreground,secondary) { channelOpen=false }
@@ -718,7 +719,8 @@ private fun ProfileScreen(
             kotlinx.coroutines.delay(100)
         }
     }
-    val glassTone = if (dark) Color(0xFF363C42) else Color(0xFFB0B5B9)
+    // One shared surface tone for every profile component, independent of profile background theme.
+    val glassTone = if (dark) Color(0xFF202326) else Color(0xFFB0B5B9)
     val rim = Brush.linearGradient(listOf(Color.White.copy(alpha = .62f), Color.White.copy(alpha = .12f), Color.White.copy(alpha = .38f)))
     var selectedSection by remember { mutableIntStateOf(0) }
     val colors = listOf(Color(0xFF8994A5), Color(0xFF1688FF), Color(0xFF8B78D8), Color(0xFF48A99A), Color(0xFFD879A6), Color(0xFFD69A55), Color(0xFF6F8298), Color(0xFFE1E4EA))
@@ -782,10 +784,10 @@ private fun ProfileScreen(
                             Text("@$profileUsername", color = Blue, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
                             Spacer(Modifier.height(16.dp))
                             Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Top) {
-                                ProfileGlasmioAction(Icons.Rounded.PhotoCamera, "Фото", text, mutedText, onPhoto)
-                                ProfileGlasmioAction(Icons.Rounded.Edit, "Изменить", text, mutedText, { })
-                                ProfileGlasmioAction(Icons.Rounded.Settings, "Настройки", text, mutedText, onOpenSettings)
-                                ProfileGlasmioAction(if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications, "Беззвучно", text, mutedText, { muted = !muted })
+                                ProfileGlasmioAction(Icons.Rounded.PhotoCamera, "Фото", text, mutedText, glassTone, onPhoto)
+                                ProfileGlasmioAction(Icons.Rounded.Edit, "Изменить", text, mutedText, glassTone, { })
+                                ProfileGlasmioAction(Icons.Rounded.Settings, "Настройки", text, mutedText, glassTone, onOpenSettings)
+                                ProfileGlasmioAction(if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications, "Беззвучно", text, mutedText, glassTone, { muted = !muted })
                             }
                         }
                     }
@@ -798,7 +800,7 @@ private fun ProfileScreen(
                                     if (trackUri == null) audioPicker.launch(arrayOf("audio/*"))
                                     else runCatching { if (player.isPlaying) { player.pause(); trackPlaying = false } else { player.start(); trackPlaying = true } }
                                 },
-                                modifier = Modifier.fillMaxSize(), navigationSurfaceColor = glassTone, emphasis = GlassEmphasis.Prominent,
+                                modifier = Modifier.fillMaxSize(), navigationSurfaceColor = glassTone, emphasis = GlassEmphasis.Regular,
                             ) {
                                 Row(Modifier.fillMaxWidth().padding(horizontal = 7.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Icon(Icons.Rounded.MusicNote, null, tint = text, modifier = Modifier.size(16.dp))
@@ -820,7 +822,7 @@ private fun ProfileScreen(
                                 drawLine(Color.White.copy(alpha = .16f), Offset(18.dp.toPx(), y), Offset(size.width - 18.dp.toPx(), y), 1.dp.toPx(), cap = StrokeCap.Round)
                             }
                         }
-                        GlasmioButton(onClick = { }, modifier = Modifier.weight(1f), navigationSurfaceColor = glassTone, emphasis = GlassEmphasis.Prominent) {
+                        GlasmioButton(onClick = { }, modifier = Modifier.weight(1f), navigationSurfaceColor = glassTone, emphasis = GlassEmphasis.Regular) {
                             Row(Modifier.padding(horizontal = 7.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text("Баланс", color = mutedText, fontSize = 10.sp)
                                 Spacer(Modifier.width(5.dp))
@@ -849,8 +851,16 @@ private fun ProfileScreen(
 
                     Spacer(Modifier.height(13.dp))
                     ProfileSectionsBar(selectedSection, { selectedSection = it }, dark, text, mutedText, glassTone)
-                    Spacer(Modifier.height(8.dp))
-                    Text(if (selectedSection == 0) "Подарков пока нет" else "Историй пока нет", color = mutedText.copy(alpha = .78f), fontSize = 11.sp)
+                    Spacer(Modifier.height(10.dp))
+                    if (selectedSection == 0) {
+                        Text("Коллекция Telegram NFT", color = text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                        Spacer(Modifier.height(4.dp))
+                        Text("30 настоящих коллекционных подарков · нажми, чтобы открыть", color = mutedText.copy(alpha = .78f), fontSize = 10.sp)
+                        Spacer(Modifier.height(10.dp))
+                        TelegramNftGallery(glassTone, text, mutedText)
+                    } else {
+                        Text("Историй пока нет", color = mutedText.copy(alpha = .78f), fontSize = 11.sp)
+                    }
                 }
             },
         )
@@ -905,7 +915,7 @@ private fun ProfileSectionsBar(selected: Int, onSelected: (Int) -> Unit, dark: B
     GlassSurface(
         modifier = Modifier.fillMaxWidth(.58f),
         shape = CircleShape,
-        navigationSurfaceColor = if (dark) Color.White.copy(alpha = .055f) else Color.Black.copy(alpha = .025f),
+        navigationSurfaceColor = accent,
     ) {
         BoxWithConstraints(Modifier.fillMaxWidth().padding(2.dp)) {
             val half = maxWidth / 2
@@ -940,10 +950,10 @@ private fun ProfileDataRow(title: String, value: String, foreground: Color, seco
 }
 
 @Composable
-private fun ProfileGlasmioAction(icon: ImageVector, label: String, foreground: Color, secondary: Color, onClick: () -> Unit) {
+private fun ProfileGlasmioAction(icon: ImageVector, label: String, foreground: Color, secondary: Color, surfaceColor: Color, onClick: () -> Unit) {
     Column(Modifier.width(68.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         // Use Glasmio's built-in button surface, rim and interaction treatment.
-        GlasmioIconButton(onClick = onClick, size = 50.dp) {
+        GlasmioIconButton(onClick = onClick, size = 50.dp, navigationSurfaceColor = surfaceColor) {
             GrafIcon(icon, label, foreground, 21.dp)
         }
         Spacer(Modifier.height(5.dp))
