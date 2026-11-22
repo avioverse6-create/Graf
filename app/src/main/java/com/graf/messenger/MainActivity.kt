@@ -52,6 +52,7 @@ import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.foundation.background
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -68,6 +69,7 @@ import androidx.compose.material.icons.rounded.Home
 import androidx.compose.material.icons.rounded.Edit
 import androidx.compose.material.icons.rounded.PhotoCamera
 import androidx.compose.material.icons.rounded.Person
+import androidx.compose.material.icons.rounded.LocationOn
 import androidx.compose.material.icons.rounded.MoreHoriz
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.Settings
@@ -653,85 +655,66 @@ private fun ProfileGlassIcon(icon:ImageVector,dark:Boolean,fill:Color,stroke:Bru
 }
 @Composable
 private fun ProfileScreen(
-    dark: Boolean,
-    foreground: Color,
-    secondary: Color,
-    photo: Uri?,
-    onBack: () -> Unit,
-    onPhoto: () -> Unit,
-    onViewPhoto: () -> Unit,
-    profileColor: Color,
-    onProfileColorChange: (Color) -> Unit,
+    dark: Boolean, foreground: Color, secondary: Color, photo: Uri?,
+    onBack: () -> Unit, onOpenSettings: () -> Unit, onPhoto: () -> Unit, onViewPhoto: () -> Unit,
+    profileColor: Color, onProfileColorChange: (Color) -> Unit,
+    profileName: String, profileUsername: String, profilePhone: String,
+    onSaveProfile: (String, String, String) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     var colorPickerOpen by remember { mutableStateOf(false) }
+    var editOpen by remember { mutableStateOf(false) }
     var muted by remember { mutableStateOf(false) }
     var selectedSection by remember { mutableIntStateOf(0) }
-    val colors = listOf(
-        Color(0xFF8994A5), Color(0xFF1688FF), Color(0xFF8B78D8),
-        Color(0xFF48A99A), Color(0xFFD879A6), Color(0xFFD69A55),
-        Color(0xFF6F8298), Color(0xFFE1E4EA)
-    )
-    val pageBackground = Brush.verticalGradient(listOf(Color.Black, Color(0xFF030405), Color.Black))
+    var editName by remember(profileName) { mutableStateOf(profileName) }
+    var editUsername by remember(profileUsername) { mutableStateOf(profileUsername) }
+    var editPhone by remember(profilePhone) { mutableStateOf(profilePhone) }
+    val colors = listOf(Color(0xFF8994A5), Color(0xFF1688FF), Color(0xFF8B78D8), Color(0xFF48A99A), Color(0xFFD879A6), Color(0xFFD69A55), Color(0xFF6F8298), Color(0xFFE1E4EA))
+    val page = if (dark) Color.Black else Color(0xFFF3F4F7)
+    val text = if (dark) Color(0xFFF5F7FC) else Color(0xFF171B24)
+    val mutedText = if (dark) Color(0xFFB5C0D0) else Color(0xFF667080)
 
-    GlasmioTheme(isDark = true) {
+    GlasmioTheme(isDark = dark) {
         GlasmioBackdropHost(
             modifier = Modifier.fillMaxSize(),
-            sampledContent = { Box(Modifier.fillMaxSize().background(Color.Black)) },
+            sampledContent = { Box(Modifier.fillMaxSize().background(page)) },
             overlayContent = {
                 Column(
-                    Modifier.fillMaxSize()
-                        .background(Color.Transparent)
-                        .verticalScroll(rememberScrollState())
-                        .padding(horizontal = 20.dp)
-                        .padding(bottom = 116.dp),
+                    Modifier.fillMaxSize().background(page).verticalScroll(rememberScrollState())
+                        .padding(horizontal = 18.dp).padding(bottom = 112.dp),
                     horizontalAlignment = Alignment.CenterHorizontally,
                 ) {
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(10.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                         GlasmioIconButton(onClick = onBack, size = 42.dp) {
-                            Icon(Icons.Rounded.ArrowBack, contentDescription = "Назад", tint = foreground, modifier = Modifier.size(21.dp))
+                            Icon(Icons.Rounded.ArrowBack, "Назад", tint = text, modifier = Modifier.size(21.dp))
                         }
                         Spacer(Modifier.weight(1f))
                         GlasmioMenu(
-                            expanded = menuExpanded,
-                            onExpandedChange = { menuExpanded = it },
-                            itemCount = 2,
+                            expanded = menuExpanded, onExpandedChange = { menuExpanded = it }, itemCount = 3,
                             anchor = { open ->
                                 GlasmioIconButton(onClick = open, size = 42.dp) {
-                                    Icon(Icons.Rounded.MoreVert, contentDescription = "Меню профиля", tint = foreground, modifier = Modifier.size(21.dp))
+                                    Icon(Icons.Rounded.MoreVert, "Меню профиля", tint = text, modifier = Modifier.size(21.dp))
                                 }
                             },
                         ) { menuBackdrop, close ->
-                            GlasmioMenuItem(
-                                title = "Цвета профиля",
-                                onClick = { colorPickerOpen = true; close() },
-                                systemName = "paintpalette",
-                                backdrop = menuBackdrop,
-                                enabled = true,
-                            )
-                            GlasmioMenuItem(
-                                title = "Юзернейм",
-                                onClick = close,
-                                systemName = "at",
-                                backdrop = menuBackdrop,
-                                enabled = false,
-                            )
+                            GlasmioMenuItem("Цвета профиля", { colorPickerOpen = !colorPickerOpen; close() }, "paintpalette", menuBackdrop, true)
+                            GlasmioMenuItem("Изменить", { editOpen = true; close() }, "pencil", menuBackdrop, true)
+                            GlasmioMenuItem("Юзернейм", close, "at", menuBackdrop, false)
                         }
                     }
 
-                    AnimatedVisibility(visible = colorPickerOpen, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
-                        GlasmioButton(onClick = { }) {
-                            Row(
-                                Modifier.padding(horizontal = 12.dp, vertical = 10.dp),
-                                horizontalArrangement = Arrangement.spacedBy(9.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                            ) {
+                    AnimatedVisibility(colorPickerOpen, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+                        GlassSurface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
+                            navigationSurfaceColor = profileColor.copy(alpha = .14f),
+                        ) {
+                            Row(Modifier.fillMaxWidth().padding(11.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
                                 colors.forEach { color ->
                                     Box(
-                                        Modifier.size(25.dp).clip(CircleShape)
-                                            .background(color)
-                                            .then(if (profileColor == color) Modifier.border(2.dp, Color.White, CircleShape) else Modifier)
+                                        Modifier.size(27.dp).clip(CircleShape).background(color)
+                                            .then(if (profileColor == color) Modifier.border(2.dp, text, CircleShape) else Modifier)
                                             .clickable { onProfileColorChange(color); colorPickerOpen = false }
                                     )
                                 }
@@ -739,120 +722,113 @@ private fun ProfileScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(18.dp))
-                    Box(
-                        Modifier.size(112.dp).clip(CircleShape)
-                            .background(profileColor.copy(alpha = .16f))
-                            .clickable(onClick = onViewPhoto)
-                            .pointerInput(photo) {
-                                var pullDistance = 0f
-                                detectVerticalDragGestures(
-                                    onVerticalDrag = { _, amount -> if (amount > 0f) pullDistance += amount else pullDistance = 0f },
-                                    onDragEnd = { if (pullDistance > 48.dp.toPx()) onViewPhoto(); pullDistance = 0f },
-                                    onDragCancel = { pullDistance = 0f },
-                                )
-                            },
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (photo != null) {
-                            ProfilePhotoImage(photo, Modifier.fillMaxSize().clip(CircleShape))
-                        } else {
-                            GrafIcon(Icons.Rounded.Person, "Фото профиля", Color.White, 52.dp)
+                    AnimatedVisibility(editOpen, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
+                        GlassSurface(
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(24.dp),
+                            navigationSurfaceColor = profileColor.copy(alpha = .12f),
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(14.dp), verticalArrangement = Arrangement.spacedBy(9.dp)) {
+                                Text("Изменить профиль", color = text, fontSize = 15.sp, fontWeight = FontWeight.Bold)
+                                ProfileEditField("Имя", editName, { editName = it }, text, mutedText)
+                                ProfileEditField("Юзернейм", editUsername, { editUsername = it.removePrefix("@").filter { ch -> ch.isLetterOrDigit() || ch == '_' } }, text, mutedText, "@")
+                                ProfileEditField("Номер", editPhone, { editPhone = it }, text, mutedText)
+                                Row(horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                                    GlasmioButton(onClick = { editOpen = false }, modifier = Modifier.weight(1f)) {
+                                        Text("Отмена", color = text, fontSize = 12.sp, modifier = Modifier.padding(9.dp))
+                                    }
+                                    GlasmioButton(onClick = {
+                                        onSaveProfile(editName.trim().ifBlank { profileName }, editUsername.trim().ifBlank { profileUsername }, editPhone.trim().ifBlank { profilePhone })
+                                        editOpen = false
+                                    }, modifier = Modifier.weight(1f), navigationSurfaceColor = profileColor.copy(alpha = .22f)) {
+                                        Text("Сохранить", color = text, fontSize = 12.sp, modifier = Modifier.padding(9.dp))
+                                    }
+                                }
+                            }
                         }
                     }
 
-                    Spacer(Modifier.height(10.dp))
-                    Text("Alicia Brown 💎", color = foreground, fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
-                    Spacer(Modifier.height(2.dp))
-                    Text("@username", color = secondary, fontSize = 13.sp, textAlign = TextAlign.Center)
-                    Spacer(Modifier.height(3.dp))
-                    Text("★ 4.9 · рейтинг", color = Color(0xFF858B96), fontSize = 10.sp, textAlign = TextAlign.Center)
-
-                    Spacer(Modifier.height(15.dp))
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically,
+                    Spacer(Modifier.height(12.dp))
+                    Box(
+                        Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp))
+                            .background(Brush.verticalGradient(listOf(profileColor.copy(alpha = if (dark) .48f else .34f), profileColor.copy(alpha = if (dark) .24f else .16f), page))),
+                        contentAlignment = Alignment.Center,
                     ) {
+                        Column(Modifier.fillMaxWidth().padding(top = 19.dp, bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                            Box(
+                                Modifier.size(104.dp).clip(CircleShape).background(profileColor.copy(alpha = .18f))
+                                    .clickable(onClick = onViewPhoto)
+                                    .pointerInput(photo) {
+                                        var pullDistance = 0f
+                                        detectVerticalDragGestures(
+                                            onVerticalDrag = { _, amount -> if (amount > 0f) pullDistance += amount else pullDistance = 0f },
+                                            onDragEnd = { if (pullDistance > 48.dp.toPx()) onViewPhoto(); pullDistance = 0f },
+                                            onDragCancel = { pullDistance = 0f },
+                                        )
+                                    },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (photo != null) ProfilePhotoImage(photo, Modifier.fillMaxSize().clip(CircleShape))
+                                else GrafIcon(Icons.Rounded.Person, "Фото профиля", text, 48.dp)
+                            }
+                            Spacer(Modifier.height(11.dp))
+                            Text(profileName, color = text, fontSize = 20.sp, fontWeight = FontWeight.Bold, textAlign = TextAlign.Center)
+                            Spacer(Modifier.height(3.dp))
+                            Text("@$profileUsername", color = Blue, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, textAlign = TextAlign.Center)
+                        }
+                    }
+
+                    Spacer(Modifier.height(12.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                         GlasmioButton(onClick = { }, modifier = Modifier.weight(1.45f), navigationSurfaceColor = profileColor.copy(alpha = .14f)) {
-                            Row(Modifier.padding(horizontal = 7.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.MusicNote, null, tint = foreground, modifier = Modifier.size(16.dp))
+                            Row(Modifier.padding(horizontal = 7.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Rounded.MusicNote, null, tint = text, modifier = Modifier.size(16.dp))
                                 Spacer(Modifier.width(5.dp))
-                                Text("Метель — PLOHOYPAREN", color = foreground, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                Text("Метель — PLOHOYPAREN", color = text, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                             }
                         }
                         GlasmioButton(onClick = { }, modifier = Modifier.weight(1f), navigationSurfaceColor = profileColor.copy(alpha = .14f)) {
-                            Row(Modifier.padding(horizontal = 7.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text("Баланс", color = secondary, fontSize = 10.sp)
+                            Row(Modifier.padding(horizontal = 7.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                                Text("Баланс", color = mutedText, fontSize = 10.sp)
                                 Spacer(Modifier.width(5.dp))
-                                Text("◆ 0.29", color = foreground, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                                Icon(Icons.Rounded.ArrowBack, null, tint = secondary, modifier = Modifier.size(13.dp).graphicsLayer { rotationZ = 180f })
+                                Text("◆ 0.29", color = text, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
+                                Icon(Icons.Rounded.ArrowBack, null, tint = mutedText, modifier = Modifier.size(13.dp).graphicsLayer { rotationZ = 180f })
                             }
                         }
                     }
 
-                    Spacer(Modifier.height(18.dp))
-                    Row(
-                        Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceEvenly,
-                        verticalAlignment = Alignment.Top,
-                    ) {
-                        ProfileGlasmioAction(Icons.Rounded.PhotoCamera, "Фото", foreground, secondary, onPhoto)
-                        ProfileGlasmioAction(Icons.Rounded.Edit, "Изменить", foreground, secondary, { })
-                        ProfileGlasmioAction(Icons.Rounded.Settings, "Настройки", foreground, secondary, onBack)
-                        ProfileGlasmioAction(
-                            if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications,
-                            "Беззвучно", foreground, secondary, { muted = !muted }
-                        )
+                    Spacer(Modifier.height(15.dp))
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Top) {
+                        ProfileGlasmioAction(Icons.Rounded.PhotoCamera, "Фото", text, mutedText, onPhoto)
+                        ProfileGlasmioAction(Icons.Rounded.Edit, "Изменить", text, mutedText, { editOpen = true })
+                        ProfileGlasmioAction(Icons.Rounded.Settings, "Настройки", text, mutedText, onOpenSettings)
+                        ProfileGlasmioAction(if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications, "Беззвучно", text, mutedText, { muted = !muted })
                     }
 
                     Spacer(Modifier.height(16.dp))
                     GlassSurface(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(25.dp),
                         navigationSurfaceColor = profileColor.copy(alpha = .12f),
                     ) {
-                        Column(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 13.dp)) {
-                            ProfileDataRow("Номер", "+1488 1234 8922", foreground, secondary)
-                            Spacer(Modifier.height(8.dp))
-                            ProfileDataRow("Юз", "@pidor", foreground, secondary)
-                            Spacer(Modifier.height(8.dp))
-                            ProfileDataRow("Адрес", "Не указан", foreground, secondary)
+                        Column(Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 17.dp)) {
+                            ProfileDataRow("Номер", profilePhone, text, mutedText)
+                            Spacer(Modifier.height(13.dp))
+                            Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                Text("Юз", color = mutedText, fontSize = 12.sp, modifier = Modifier.width(66.dp))
+                                Text("@$profileUsername", color = Blue, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
+                            }
+                            Spacer(Modifier.height(13.dp))
+                            ProfileDataRow("Адрес", "0-27-14", text, mutedText)
+                            Spacer(Modifier.height(12.dp))
+                            ProfileAddressMap(dark, profileColor)
                         }
                     }
 
-                    Spacer(Modifier.height(16.dp))
-                    GlassSurface(
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = androidx.compose.foundation.shape.CircleShape,
-                        navigationSurfaceColor = profileColor.copy(alpha = .12f),
-                    ) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(5.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                        ) {
-                            Box(
-                                Modifier.weight(1f).clip(CircleShape)
-                                    .background(if (selectedSection == 0) Color.White.copy(alpha = .17f) else Color.Transparent)
-                                    .clickable { selectedSection = 0 }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text("Подарки", color = if (selectedSection == 0) foreground else secondary, fontSize = 12.sp)
-                            }
-                            Box(
-                                Modifier.weight(1f).clip(CircleShape)
-                                    .background(if (selectedSection == 1) Color.White.copy(alpha = .17f) else Color.Transparent)
-                                    .clickable { selectedSection = 1 }
-                                    .padding(vertical = 10.dp),
-                                contentAlignment = Alignment.Center,
-                            ) {
-                                Text("Истории", color = if (selectedSection == 1) foreground else secondary, fontSize = 12.sp)
-                            }
-                        }
-                    }
-                    Spacer(Modifier.height(10.dp))
-                    Text(if (selectedSection == 0) "Подарков пока нет" else "Историй пока нет", color = secondary.copy(alpha = .72f), fontSize = 11.sp)
+                    Spacer(Modifier.height(13.dp))
+                    ProfileSectionsBar(selectedSection, { selectedSection = it }, dark, text, mutedText, profileColor)
+                    Spacer(Modifier.height(8.dp))
+                    Text(if (selectedSection == 0) "Подарков пока нет" else "Историй пока нет", color = mutedText.copy(alpha = .78f), fontSize = 11.sp)
                 }
             },
         )
@@ -860,21 +836,83 @@ private fun ProfileScreen(
 }
 
 @Composable
-private fun ProfileDataRow(title: String, value: String, foreground: Color, secondary: Color) {
-    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-        Text(title, color = secondary, fontSize = 11.sp, modifier = Modifier.width(62.dp))
-        Text(value, color = foreground, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+private fun ProfileEditField(label: String, value: String, onValueChange: (String) -> Unit, foreground: Color, secondary: Color, prefix: String = "") {
+    GlassSurface(modifier = Modifier.fillMaxWidth(), shape = androidx.compose.foundation.shape.RoundedCornerShape(15.dp)) {
+        Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 11.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text("$label  ", color = secondary, fontSize = 11.sp)
+            if (prefix.isNotEmpty()) Text(prefix, color = Blue, fontSize = 13.sp)
+            BasicTextField(
+                value = value, onValueChange = onValueChange, singleLine = true,
+                textStyle = androidx.compose.ui.text.TextStyle(color = foreground, fontSize = 13.sp),
+                cursorBrush = androidx.compose.ui.graphics.SolidColor(Blue),
+                modifier = Modifier.weight(1f),
+            )
+        }
     }
 }
 
 @Composable
-private fun ProfileGlasmioAction(
-    icon: ImageVector,
-    label: String,
-    foreground: Color,
-    secondary: Color,
-    onClick: () -> Unit,
-) {
+private fun ProfileAddressMap(dark: Boolean, accent: Color) {
+    Box(Modifier.fillMaxWidth().height(86.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(16.dp))
+        .background(if (dark) Color(0xFF18212C) else Color(0xFFE0E5EA))) {
+        Canvas(Modifier.fillMaxSize()) {
+            val road = if (dark) Color.White.copy(alpha = .16f) else Color(0xFF8995A3).copy(alpha = .42f)
+            val minor = if (dark) Color.White.copy(alpha = .08f) else Color.White.copy(alpha = .75f)
+            for (i in 0..5) {
+                val y = size.height * i / 5f
+                drawLine(road, androidx.compose.ui.geometry.Offset(0f, y), androidx.compose.ui.geometry.Offset(size.width, y + 16f), strokeWidth = 5f)
+            }
+            for (i in 0..6) {
+                val x = size.width * i / 6f
+                drawLine(minor, androidx.compose.ui.geometry.Offset(x, 0f), androidx.compose.ui.geometry.Offset(x - 20f, size.height), strokeWidth = 3f)
+            }
+            drawCircle(accent.copy(alpha = .22f), radius = 18f, center = androidx.compose.ui.geometry.Offset(size.width * .52f, size.height * .52f))
+            drawCircle(accent, radius = 5f, center = androidx.compose.ui.geometry.Offset(size.width * .52f, size.height * .52f))
+        }
+        Row(Modifier.align(Alignment.BottomStart).padding(7.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(Icons.Rounded.LocationOn, null, tint = accent, modifier = Modifier.size(14.dp))
+            Text("Местоположение · 0-27-14", color = if (dark) Color.White.copy(alpha = .82f) else Color(0xFF333B48), fontSize = 9.sp)
+        }
+    }
+}
+
+@Composable
+private fun ProfileSectionsBar(selected: Int, onSelected: (Int) -> Unit, dark: Boolean, foreground: Color, secondary: Color, accent: Color) {
+    GlassSurface(modifier = Modifier.fillMaxWidth(.78f), shape = CircleShape, navigationSurfaceColor = accent.copy(alpha = .13f)) {
+        BoxWithConstraints(Modifier.fillMaxWidth().padding(3.dp)) {
+            val half = maxWidth / 2
+            val offset by androidx.compose.animation.core.animateDpAsState(
+                targetValue = if (selected == 0) 0.dp else half,
+                animationSpec = spring(dampingRatio = .72f, stiffness = 420f),
+                label = "profile-section-indicator",
+            )
+            GlassSurface(
+                modifier = Modifier.offset(x = offset).width(half).height(31.dp),
+                shape = CircleShape,
+                navigationSurfaceColor = accent.copy(alpha = if (dark) .22f else .16f),
+            ) { }
+            Row(Modifier.fillMaxWidth().height(31.dp), verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.weight(1f).fillMaxHeight().clickable { onSelected(0) }, contentAlignment = Alignment.Center) {
+                    Text("Подарки", color = if (selected == 0) foreground else secondary, fontSize = 10.sp)
+                }
+                Box(Modifier.weight(1f).fillMaxHeight().clickable { onSelected(1) }, contentAlignment = Alignment.Center) {
+                    Text("Истории", color = if (selected == 1) foreground else secondary, fontSize = 10.sp)
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProfileDataRow(title: String, value: String, foreground: Color, secondary: Color) {
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+        Text(title, color = secondary, fontSize = 12.sp, modifier = Modifier.width(66.dp))
+        Text(value, color = foreground, fontSize = 13.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    }
+}
+
+@Composable
+private fun ProfileGlasmioAction(icon: ImageVector, label: String, foreground: Color, secondary: Color, onClick: () -> Unit) {
     Column(Modifier.width(68.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         GlasmioIconButton(onClick = onClick, size = 50.dp) {
             Icon(imageVector = icon, contentDescription = label, tint = foreground, modifier = Modifier.size(21.dp))
