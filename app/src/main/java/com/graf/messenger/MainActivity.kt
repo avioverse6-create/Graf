@@ -242,7 +242,7 @@ private fun GrafApp() {
    if(!channelOpen) {
     PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it;settingsOpen=false},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
      modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=8.dp).fillMaxWidth()) {
-      GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index;profileOpen=false } }
+      GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index;settingsOpen=false } }
     }
    }
    if(photoViewer && profilePhoto!=null) ProfilePhotoViewer(profilePhoto!!,dark) { photoViewer=false }
