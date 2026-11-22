@@ -97,6 +97,18 @@ import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.foundation.gestures.detectVerticalDragGestures
+import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.PhotoCamera
+import androidx.compose.material.icons.rounded.NotificationsOff
+import androidx.compose.material.icons.rounded.VolumeOff
+import io.github.neoruaa.glasmio.core.GlasmioTheme
+import io.github.neoruaa.glasmio.glass.GlasmioBackdropHost
+import io.github.neoruaa.glasmio.ui.GlasmioButton
+import io.github.neoruaa.glasmio.ui.GlasmioIconButton
+import io.github.neoruaa.glasmio.ui.GlasmioMenu
+import io.github.neoruaa.glasmio.ui.GlasmioMenuItem
 import com.styropyr0.prismal.PrismalGlass
 import com.styropyr0.prismal.components.LocalPrismalBottomTabHighlightedIndex
 import com.styropyr0.prismal.components.PrismalGlassBottomTab
@@ -210,8 +222,8 @@ private fun GrafApp() {
         GrafTab.Home -> ChatsScreen(dark,foreground,secondary,query,{query=it},backdrop)
         GrafTab.Contact -> ContactsScreen(dark,foreground,secondary)
         GrafTab.Search -> SearchScreen(query,{query=it},dark,foreground,secondary) { channelOpen=false }
-        GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,backdrop,
-         onBack={profileOpen=false},onMore={profileOpen=false},onPhoto={photoPicker.launch(arrayOf("image/*"))},
+        GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,
+         onBack={profileOpen=false},onPhoto={photoPicker.launch(arrayOf("image/*"))},
          onViewPhoto={if(profilePhoto!=null) photoViewer=true else photoPicker.launch(arrayOf("image/*"))})
        }
       }
@@ -633,42 +645,201 @@ private fun ProfileGlassIcon(icon:ImageVector,dark:Boolean,fill:Color,stroke:Bru
  }
 }
 @Composable
-private fun ProfileScreen(dark:Boolean,foreground:Color,secondary:Color,photo:Uri?,backdrop:com.styropyr0.prismal.PrismalBackdrop,onBack:()->Unit,onMore:()->Unit,onPhoto:()->Unit,onViewPhoto:()->Unit) {
- val fill=if(dark) Color.White.copy(alpha=.12f) else Color.White.copy(alpha=.30f)
- val stroke=Brush.linearGradient(listOf(Color.White.copy(alpha=.86f),Color.White.copy(alpha=.20f),Color.White.copy(alpha=.65f)))
- Box(Modifier.fillMaxSize().offset(y=(-48).dp)) {
-  Column(Modifier.fillMaxSize()) {
-   Spacer(Modifier.height(150.dp))
-   Column(Modifier.fillMaxWidth(),horizontalAlignment=Alignment.CenterHorizontally) {
-    Text("Alicia Brown 💎",color=foreground,fontSize=20.sp,fontWeight=FontWeight.W900)
-    Spacer(Modifier.height(4.dp)); Text("last seen just now",color=secondary,fontSize=13.sp,fontWeight=FontWeight.Normal)
-    Spacer(Modifier.height(18.dp))
-    Row(Modifier.clip(CircleShape).background(fill).border(1.dp,stroke,CircleShape).padding(horizontal=15.dp,vertical=6.dp),verticalAlignment=Alignment.CenterVertically) {
-     GrafIcon(Icons.Rounded.MusicNote,"Music",foreground,15.dp); Spacer(Modifier.width(7.dp)); Text("Stayin' Alive - Bee Gees",color=foreground,fontSize=12.sp,fontWeight=FontWeight.Normal)
+private fun ProfileScreen(
+    dark: Boolean,
+    foreground: Color,
+    secondary: Color,
+    photo: Uri?,
+    onBack: () -> Unit,
+    onPhoto: () -> Unit,
+    onViewPhoto: () -> Unit,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
+    var muted by remember { mutableStateOf(false) }
+    val pageBackground = if (dark) {
+        Brush.verticalGradient(listOf(Color(0xFF000000), Color(0xFF080B12), Color(0xFF000000)))
+    } else {
+        Brush.verticalGradient(listOf(Color(0xFFF7F8FA), Color(0xFFE8EBF0), Color(0xFFF7F8FA)))
     }
-   }
-   Spacer(Modifier.height(26.dp))
-   Row(Modifier.fillMaxWidth().padding(horizontal=24.dp),horizontalArrangement=Arrangement.SpaceEvenly) {
-    ProfileAction(Icons.Rounded.Call,"call",dark,fill,stroke,secondary,backdrop) {}
-    ProfileAction(Icons.Rounded.Notifications,"mute",dark,fill,stroke,secondary,backdrop) {}
-    ProfileAction(Icons.Rounded.Search,"search",dark,fill,stroke,secondary,backdrop) {}
-    ProfileAction(Icons.Rounded.MoreHoriz,"more",dark,fill,stroke,secondary,backdrop,onMore)
-   }
-  }
-  Row(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=16.dp),verticalAlignment=Alignment.CenterVertically) {
-   ProfileGlassIcon(Icons.Rounded.ArrowBack,dark,fill,stroke,backdrop,onBack); Spacer(Modifier.weight(1f))
-   PrismalGlassButton(onClick={},backdrop=backdrop,modifier=Modifier,height=48.dp,
-    tint=if(dark) Color.White.copy(alpha=.08f) else Color.White.copy(alpha=.22f),contentPadding=PaddingValues(horizontal=20.dp)) {
-    Text("Edit",color=foreground,fontSize=15.sp,fontWeight=FontWeight.Normal)
-   }
-  }
-  Box(Modifier.align(Alignment.TopCenter).padding(top=29.dp).size(108.dp).clip(CircleShape)
-   .background(Brush.linearGradient(listOf(Color(0xFF69C9D0),Color(0xFF477EB5),Color(0xFFC8B5A0)))).border(2.dp,stroke,CircleShape)
-   .combinedClickable(onClick=onViewPhoto,onLongClick=onPhoto),contentAlignment=Alignment.Center) {
-    if(photo!=null) ProfilePhotoImage(photo,Modifier.fillMaxSize()) else GrafIcon(Icons.Rounded.Person,"Profile photo",Color.White,70.dp)
-  }
- }
+
+    GlasmioTheme(isDark = dark) {
+        GlasmioBackdropHost(
+            modifier = Modifier.fillMaxSize(),
+            sampledContent = {
+                Box(Modifier.fillMaxSize().background(pageBackground))
+            },
+            overlayContent = {
+                Column(
+                    Modifier.fillMaxSize().background(Color.Transparent)
+                        .padding(horizontal = 22.dp)
+                ) {
+                    Spacer(Modifier.height(54.dp))
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        GlasmioButton(
+                            onClick = { },
+                            size = io.github.neoruaa.glasmio.ui.GlasmioButtonSize.Medium,
+                            modifier = Modifier.height(42.dp),
+                        ) {
+                            Text("Edit", color = foreground, fontSize = 15.sp)
+                        }
+                        Spacer(Modifier.weight(1f))
+                        GlasmioMenu(
+                            expanded = menuExpanded,
+                            onExpandedChange = { menuExpanded = it },
+                            itemCount = 2,
+                            anchor = { open ->
+                                GlasmioIconButton(
+                                    onClick = open,
+                                    size = 44.dp,
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.MoreVert,
+                                        contentDescription = "Меню профиля",
+                                        tint = foreground,
+                                        modifier = Modifier.size(22.dp),
+                                    )
+                                }
+                            },
+                        ) { menuBackdrop, close ->
+                            GlasmioMenuItem(
+                                title = "Цвета профиля",
+                                onClick = close,
+                                systemName = "paintpalette",
+                                backdrop = menuBackdrop,
+                                enabled = false,
+                            )
+                            GlasmioMenuItem(
+                                title = "Юзернейм",
+                                onClick = close,
+                                systemName = "at",
+                                backdrop = menuBackdrop,
+                                enabled = false,
+                            )
+                        }
+                    }
+
+                    Spacer(Modifier.height(28.dp))
+                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                        GlasmioIconButton(
+                            onClick = onViewPhoto,
+                            size = 148.dp,
+                            modifier = Modifier.pointerInput(photo) {
+                                var pullDistance = 0f
+                                detectVerticalDragGestures(
+                                    onVerticalDrag = { _, amount ->
+                                        if (amount > 0f) pullDistance += amount
+                                        else pullDistance = 0f
+                                    },
+                                    onDragEnd = {
+                                        if (pullDistance > 48.dp.toPx()) onViewPhoto()
+                                        pullDistance = 0f
+                                    },
+                                    onDragCancel = { pullDistance = 0f },
+                                )
+                            },
+                        ) {
+                            Box(
+                                Modifier.fillMaxSize().padding(4.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        Brush.linearGradient(
+                                            listOf(Color(0xFF1688FF), Color(0xFF65C8D0), Color(0xFF9A80D8))
+                                        )
+                                    ),
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                if (photo != null) {
+                                    ProfilePhotoImage(photo, Modifier.fillMaxSize())
+                                } else {
+                                    GrafIcon(Icons.Rounded.Person, "Фото профиля", Color.White, 68.dp)
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(18.dp))
+                    Text(
+                        "Alicia Brown 💎",
+                        color = foreground,
+                        fontSize = 23.sp,
+                        fontWeight = FontWeight.W900,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(5.dp))
+                    Text(
+                        "@username",
+                        color = secondary,
+                        fontSize = 14.sp,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                    Spacer(Modifier.height(30.dp))
+
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top,
+                    ) {
+                        ProfileGlasmioAction(
+                            Icons.Rounded.PhotoCamera, "Сменить фото", foreground, secondary, onPhoto
+                        )
+                        ProfileGlasmioAction(
+                            Icons.Rounded.Edit, "Изменить", foreground, secondary, { }
+                        )
+                        ProfileGlasmioAction(
+                            Icons.Rounded.Settings, "Настройки", foreground, secondary, onBack
+                        )
+                        ProfileGlasmioAction(
+                            if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications,
+                            "Беззвучно", foreground, secondary, { muted = !muted }
+                        )
+                    }
+                    Spacer(Modifier.height(24.dp))
+                }
+            },
+        )
+    }
 }
+
+@Composable
+private fun ProfileGlasmioAction(
+    icon: ImageVector,
+    label: String,
+    foreground: Color,
+    secondary: Color,
+    onClick: () -> Unit,
+) {
+    Column(
+        Modifier.width(76.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        GlasmioIconButton(
+            onClick = onClick,
+            size = 58.dp,
+        ) {
+            Icon(
+                imageVector = icon,
+                contentDescription = label,
+                tint = foreground,
+                modifier = Modifier.size(24.dp),
+            )
+        }
+        Spacer(Modifier.height(8.dp))
+        Text(
+            label,
+            color = secondary,
+            fontSize = 11.sp,
+            textAlign = TextAlign.Center,
+            maxLines = 2,
+            lineHeight = 13.sp,
+        )
+    }
+}
+
 @Composable
 private fun ProfileAction(icon:ImageVector,label:String,dark:Boolean,fill:Color,stroke:Brush,secondary:Color,backdrop:com.styropyr0.prismal.PrismalBackdrop,onClick:()->Unit) {
  Column(Modifier.width(64.dp),horizontalAlignment=Alignment.CenterHorizontally) {
