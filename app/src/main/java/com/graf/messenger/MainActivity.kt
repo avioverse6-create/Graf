@@ -692,6 +692,9 @@ private fun ProfileScreen(
         }.onFailure { trackPlaying = false }
     }
     DisposableEffect(player) { onDispose { runCatching { player.release() } } }
+    LaunchedEffect(Unit) {
+        trackUri?.let { savedUri -> runCatching { player.setDataSource(context, savedUri); player.prepare() } }
+    }
     LaunchedEffect(trackPlaying, trackUri) {
         while (trackPlaying) {
             val duration = runCatching { player.duration }.getOrDefault(0)
@@ -721,7 +724,11 @@ private fun ProfileScreen(
                 ) {
                     Spacer(Modifier.height(10.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                        GlasmioIconButton(onClick = onBack, size = 42.dp) {
+                        GlasmioIconButton(
+                            onClick = onBack, size = 46.dp, emphasis = GlassEmphasis.Prominent,
+                            navigationSurfaceColor = glassTone, modifier = Modifier.border(1.dp, rim, CircleShape),
+                            sampleBackdrop = true,
+                        ) {
                             Icon(Icons.Rounded.ChevronLeft, "Назад", tint = text, modifier = Modifier.size(29.dp))
                         }
                         Spacer(Modifier.weight(1f))
