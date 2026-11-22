@@ -2,6 +2,7 @@ package com.graf.messenger
 
 import android.os.Bundle
 import android.content.res.Configuration
+import coil.compose.AsyncImage
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -171,6 +172,47 @@ private enum class GrafTab(val title: String, val icon: ImageVector) {
     Search("Search", Icons.Rounded.Search),
     Settings("Settings", Icons.Rounded.Settings)
 }
+
+private data class TelegramNftItem(val name: String, val slug: String) {
+    val imageUrl: String get() = "https://nft.fragment.com/gift/$slug-1.medium.jpg"
+    val telegramUrl: String get() = "https://t.me/nft/$slug-1"
+}
+
+// Collection names and slugs are taken from the public Telegram gift catalogue.
+// Each tile opens the corresponding collectible gift page; these are examples,
+// not a claim that the current Graf user owns these NFTs.
+private val TelegramNftItems = listOf(
+    TelegramNftItem("Artisan Brick", "artisanbrick"),
+    TelegramNftItem("Astral Shard", "astralshard"),
+    TelegramNftItem("B-Day Candle", "bdaycandle"),
+    TelegramNftItem("Berry Box", "berrybox"),
+    TelegramNftItem("Big Year", "bigyear"),
+    TelegramNftItem("Bling Binky", "blingbinky"),
+    TelegramNftItem("Bonded Ring", "bondedring"),
+    TelegramNftItem("Bow Tie", "bowtie"),
+    TelegramNftItem("Bunny Muffin", "bunnymuffin"),
+    TelegramNftItem("Candy Cane", "candycane"),
+    TelegramNftItem("Clover Pin", "cloverpin"),
+    TelegramNftItem("Cookie Heart", "cookieheart"),
+    TelegramNftItem("Crystal Ball", "crystalball"),
+    TelegramNftItem("Cupid Charm", "cupidcharm"),
+    TelegramNftItem("Desk Calendar", "deskcalendar"),
+    TelegramNftItem("Diamond Ring", "diamondring"),
+    TelegramNftItem("Durov’s Cap", "durovscap"),
+    TelegramNftItem("Easter Egg", "easteregg"),
+    TelegramNftItem("Electric Skull", "electricskull"),
+    TelegramNftItem("Eternal Candle", "eternalcandle"),
+    TelegramNftItem("Eternal Rose", "eternalrose"),
+    TelegramNftItem("Evil Eye", "evileye"),
+    TelegramNftItem("Faith Amulet", "faithamulet"),
+    TelegramNftItem("Flying Broom", "flyingbroom"),
+    TelegramNftItem("Fresh Socks", "freshsocks"),
+    TelegramNftItem("Gem Signet", "gemsignet"),
+    TelegramNftItem("Genie Lamp", "genielamp"),
+    TelegramNftItem("Ginger Cookie", "gingercookie"),
+    TelegramNftItem("Hanging Star", "hangingstar"),
+    TelegramNftItem("Happy Brownie", "happybrownie"),
+)
 
 @Composable
 private fun GrafApp() {
@@ -864,6 +906,45 @@ private fun ProfileScreen(
                 }
             },
         )
+    }
+}
+
+@Composable
+private fun TelegramNftGallery(surface: Color, foreground: Color, secondary: Color) {
+    val context = LocalContext.current
+    Column(verticalArrangement = Arrangement.spacedBy(9.dp)) {
+        TelegramNftItems.chunked(3).forEach { rowItems ->
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                rowItems.forEach { item ->
+                    Column(
+                        Modifier.weight(1f)
+                            .clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                            .background(surface)
+                            .border(1.dp, Color.White.copy(alpha = .12f), androidx.compose.foundation.shape.RoundedCornerShape(14.dp))
+                            .clickable {
+                                runCatching {
+                                    context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, Uri.parse(item.telegramUrl)))
+                                }
+                            }
+                            .padding(7.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                    ) {
+                        AsyncImage(
+                            model = item.imageUrl,
+                            contentDescription = item.name,
+                            modifier = Modifier.fillMaxWidth().aspectRatio(1f)
+                                .clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)),
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                        )
+                        Spacer(Modifier.height(6.dp))
+                        Text(item.name, color = foreground, fontSize = 9.sp, fontWeight = FontWeight.SemiBold,
+                            maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.Center)
+                        Text("#1 · Telegram NFT", color = secondary, fontSize = 8.sp, maxLines = 1)
+                    }
+                }
+                repeat(3 - rowItems.size) { Spacer(Modifier.weight(1f)) }
+            }
+        }
     }
 }
 
