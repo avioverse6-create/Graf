@@ -229,7 +229,6 @@ private fun GrafApp() {
  }
 }
 @Composable
-@Composable
 private fun GrafSettingsCog(active: Boolean, tint: Color) {
     val progress = remember { Animatable(0f) }
     LaunchedEffect(active) {
@@ -250,7 +249,7 @@ private fun GrafSettingsCog(active: Boolean, tint: Color) {
         p < .90f -> .82f + .22f * (p - .70f) / .20f
         else -> 1.04f - .04f * (p - .90f) / .10f
     }
-    Icon(GrafSettingsCogIcon, "Settings", tint, modifier = Modifier.size(22.dp).graphicsLayer {
+    Icon(imageVector = GrafSettingsCogIcon, contentDescription = "Settings", tint = tint, modifier = Modifier.size(22.dp).graphicsLayer {
         rotationZ = rotation
         scaleX = scale
         scaleY = scale
@@ -258,6 +257,7 @@ private fun GrafSettingsCog(active: Boolean, tint: Color) {
     })
 }
 
+@Composable
 private fun RowScope.GrafBottomTab(index: Int, tab: GrafTab, selected: Int, dark: Boolean, onClick: () -> Unit) {
     val highlighted = LocalPrismalBottomTabHighlightedIndex.current()
     val active = if (highlighted >= 0) highlighted == index else selected == index
