@@ -16,6 +16,9 @@ import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Circle
 
 import android.graphics.BitmapFactory
+import android.media.MediaPlayer
+import android.provider.OpenableColumns
+import androidx.compose.ui.geometry.Offset
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -242,7 +245,7 @@ private fun GrafApp() {
    }
    if(!channelOpen) {
     PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it;settingsOpen=false},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
-     modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=8.dp).fillMaxWidth()) {
+     modifier=Modifier.align(Alignment.BottomCenter).navigationBarsPadding().padding(horizontal=20.dp,vertical=8.dp).fillMaxWidth().border(1.dp, Brush.linearGradient(listOf(Color.White.copy(alpha=.58f), Color.White.copy(alpha=.10f), Color.White.copy(alpha=.34f))), CircleShape)) {
       GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index;settingsOpen=false } }
     }
    }
@@ -663,8 +666,43 @@ private fun ProfileScreen(
     onSaveProfile: (String, String, String) -> Unit,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
-    var colorPickerOpen by remember { mutableStateOf(false) }
-        var muted by remember { mutableStateOf(false) }
+    var muted by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("graf_prefs", 0) }
+    var trackUri by remember { mutableStateOf(prefs.getString("profile_track_uri", null)?.let(Uri::parse)) }
+    var trackTitle by remember { mutableStateOf(prefs.getString("profile_track_title", null) ?: "Добавить песню") }
+    var trackPlaying by remember { mutableStateOf(false) }
+    var trackProgress by remember { mutableFloatStateOf(0f) }
+    val player = remember { MediaPlayer() }
+    val audioPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) runCatching {
+            context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            player.reset()
+            player.setDataSource(context, uri)
+            player.prepare()
+            player.start()
+            trackUri = uri
+            trackPlaying = true
+            trackProgress = 0f
+            val title = context.contentResolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
+                if (cursor.moveToFirst()) cursor.getString(0) else null
+            } ?: "Моя песня"
+            trackTitle = title
+            prefs.edit().putString("profile_track_uri", uri.toString()).putString("profile_track_title", title).apply()
+        }.onFailure { trackPlaying = false }
+    }
+    DisposableEffect(player) { onDispose { runCatching { player.release() } } }
+    LaunchedEffect(trackPlaying, trackUri) {
+        while (trackPlaying) {
+            val duration = runCatching { player.duration }.getOrDefault(0)
+            val position = runCatching { player.currentPosition }.getOrDefault(0)
+            trackProgress = if (duration > 0) (position.toFloat() / duration).coerceIn(0f, 1f) else 0f
+            if (duration > 0 && position >= duration) trackPlaying = false
+            kotlinx.coroutines.delay(100)
+        }
+    }
+    val glassTone = if (dark) Color(0xFF25272B) else Color(0xFFE2E4E7)
+    val rim = Brush.linearGradient(listOf(Color.White.copy(alpha = .62f), Color.White.copy(alpha = .12f), Color.White.copy(alpha = .38f)))
     var selectedSection by remember { mutableIntStateOf(0) }
     val colors = listOf(Color(0xFF8994A5), Color(0xFF1688FF), Color(0xFF8B78D8), Color(0xFF48A99A), Color(0xFFD879A6), Color(0xFFD69A55), Color(0xFF6F8298), Color(0xFFE1E4EA))
     val page = if (dark) Color.Black else Color(0xFFF3F4F7)
@@ -690,42 +728,27 @@ private fun ProfileScreen(
                         GlasmioMenu(
                             expanded = menuExpanded, onExpandedChange = { menuExpanded = it }, itemCount = 1,
                             anchor = { open ->
-                                GlasmioIconButton(onClick = open, size = 42.dp) {
+                                GlasmioIconButton(
+                                    onClick = open, size = 46.dp, emphasis = GlassEmphasis.Prominent,
+                                    navigationSurfaceColor = glassTone, modifier = Modifier.border(1.dp, rim, CircleShape),
+                                    sampleBackdrop = true,
+                                ) {
                                     Icon(Icons.Rounded.MoreVert, "Меню профиля", tint = text, modifier = Modifier.size(21.dp))
                                 }
                             },
                         ) { menuBackdrop, close ->
-                            GlasmioMenuItem(title = "Цвета профиля", onClick = { colorPickerOpen = !colorPickerOpen; close() }, systemName = "paintpalette", backdrop = menuBackdrop, enabled = true)
-                        }
-                    }
-
-                    AnimatedVisibility(colorPickerOpen, enter = fadeIn() + expandVertically(), exit = fadeOut() + shrinkVertically()) {
-                        GlassSurface(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp),
-                            navigationSurfaceColor = if (dark) Color.White.copy(alpha = .09f) else Color.Black.copy(alpha = .045f),
-                        ) {
-                            Row(Modifier.fillMaxWidth().padding(11.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.CenterVertically) {
-                                colors.forEach { color ->
-                                    Box(
-                                        Modifier.size(27.dp).clip(CircleShape).background(color)
-                                            .then(if (profileColor == color) Modifier.border(2.dp, text, CircleShape) else Modifier)
-                                            .clickable { onProfileColorChange(color); colorPickerOpen = false }
-                                    )
-                                }
-                            }
+                            GlasmioMenuItem(title = "Добавить песню", onClick = { audioPicker.launch(arrayOf("audio/*")); close() }, systemName = "music.note", backdrop = menuBackdrop, enabled = true)
                         }
                     }
 
                     Spacer(Modifier.height(12.dp))
                     Box(
-                        Modifier.requiredWidth(LocalConfiguration.current.screenWidthDp.dp).offset(x = (-18).dp)
-                            .background(Brush.verticalGradient(listOf(profileColor.copy(alpha = if (dark) .48f else .34f), profileColor.copy(alpha = if (dark) .24f else .16f), page))),
+                        Modifier.fillMaxWidth(),
                         contentAlignment = Alignment.Center,
                     ) {
                         Column(Modifier.fillMaxWidth().padding(top = 19.dp, bottom = 16.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                             Box(
-                                Modifier.size(104.dp).clip(CircleShape).background(profileColor.copy(alpha = .18f))
+                                Modifier.size(104.dp).clip(CircleShape).background(glassTone)
                                     .clickable(onClick = onViewPhoto)
                                     .pointerInput(photo) {
                                         var pullDistance = 0f
@@ -756,14 +779,27 @@ private fun ProfileScreen(
 
                     Spacer(Modifier.height(12.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        GlasmioButton(onClick = { }, modifier = Modifier.weight(1.45f), navigationSurfaceColor = profileColor.copy(alpha = .14f)) {
-                            Row(Modifier.padding(horizontal = 7.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.MusicNote, null, tint = text, modifier = Modifier.size(16.dp))
-                                Spacer(Modifier.width(5.dp))
-                                Text("Метель — PLOHOYPAREN", color = text, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                        Box(Modifier.weight(1.45f).height(50.dp)) {
+                            GlasmioButton(
+                                onClick = {
+                                    if (trackUri == null) audioPicker.launch(arrayOf("audio/*"))
+                                    else runCatching { if (player.isPlaying) { player.pause(); trackPlaying = false } else { player.start(); trackPlaying = true } }
+                                },
+                                modifier = Modifier.fillMaxSize(), navigationSurfaceColor = glassTone, emphasis = GlassEmphasis.Prominent,
+                            ) {
+                                Row(Modifier.fillMaxWidth().padding(horizontal = 7.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.MusicNote, null, tint = text, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(5.dp))
+                                    Text(trackTitle, color = text, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                }
+                            }
+                            Canvas(Modifier.fillMaxSize().padding(horizontal = 18.dp, vertical = 5.dp)) {
+                                val y = size.height - 2.dp.toPx()
+                                drawLine(Color.White.copy(alpha = .22f), Offset(0f, y), Offset(size.width, y), 1.dp.toPx(), cap = StrokeCap.Round)
+                                if (trackProgress > 0f) drawLine(Color.White.copy(alpha = .95f), Offset(0f, y), Offset(size.width * trackProgress, y), 2.dp.toPx(), cap = StrokeCap.Round)
                             }
                         }
-                        GlasmioButton(onClick = { }, modifier = Modifier.weight(1f), navigationSurfaceColor = profileColor.copy(alpha = .14f)) {
+                        GlasmioButton(onClick = { }, modifier = Modifier.weight(1f), navigationSurfaceColor = glassTone, emphasis = GlassEmphasis.Prominent) {
                             Row(Modifier.padding(horizontal = 7.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically) {
                                 Text("Баланс", color = mutedText, fontSize = 10.sp)
                                 Spacer(Modifier.width(5.dp))
@@ -776,7 +812,7 @@ private fun ProfileScreen(
                     Spacer(Modifier.height(16.dp))
                     Box(
                         Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp))
-                            .background(if (dark) Color(0xFF17191E) else Color(0xFFE5E7EB)),
+                            .background(glassTone),
                     ) {
                         Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp)) {
                             ProfileDataRow("Номер", profilePhone, text, mutedText)
@@ -791,7 +827,7 @@ private fun ProfileScreen(
                     }
 
                     Spacer(Modifier.height(13.dp))
-                    ProfileSectionsBar(selectedSection, { selectedSection = it }, dark, text, mutedText, profileColor)
+                    ProfileSectionsBar(selectedSection, { selectedSection = it }, dark, text, mutedText, glassTone)
                     Spacer(Modifier.height(8.dp))
                     Text(if (selectedSection == 0) "Подарков пока нет" else "Историй пока нет", color = mutedText.copy(alpha = .78f), fontSize = 11.sp)
                 }
@@ -879,7 +915,13 @@ private fun ProfileDataRow(title: String, value: String, foreground: Color, seco
 @Composable
 private fun ProfileGlasmioAction(icon: ImageVector, label: String, foreground: Color, secondary: Color, onClick: () -> Unit) {
     Column(Modifier.width(68.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        GlasmioIconButton(onClick = onClick, size = 50.dp) {
+        val neutral = if (foreground == Color(0xFFF5F7FC)) Color(0xFF25272B) else Color(0xFFE2E4E7)
+        val rim = Brush.linearGradient(listOf(Color.White.copy(alpha = .68f), Color.White.copy(alpha = .12f), Color.White.copy(alpha = .42f)))
+        GlasmioIconButton(
+            onClick = onClick, size = 56.dp, emphasis = GlassEmphasis.Prominent,
+            navigationSurfaceColor = neutral, modifier = Modifier.border(1.dp, rim, CircleShape),
+            sampleBackdrop = true,
+        ) {
             GrafIcon(icon, label, foreground, 21.dp)
         }
         Spacer(Modifier.height(5.dp))
@@ -895,11 +937,26 @@ private fun ProfilePhotoImage(uri:Uri,modifier:Modifier=Modifier) {
 }
 @Composable
 private fun ProfilePhotoViewer(uri:Uri,dark:Boolean,onClose:()->Unit) {
- var drag by remember { mutableFloatStateOf(0f) }
- Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.97f)).pointerInput(Unit) {
-  detectVerticalDragGestures(onVerticalDrag={_,amount->drag+=amount},onDragEnd={if(drag>90f) onClose();drag=0f})
- },contentAlignment=Alignment.Center) {
-  ProfilePhotoImage(uri,Modifier.fillMaxSize().padding(18.dp))
-  Box(Modifier.align(Alignment.TopEnd).padding(22.dp).size(44.dp).clip(CircleShape).background(Color.White.copy(alpha=.18f)).clickable(onClick=onClose),contentAlignment=Alignment.Center) { GrafIcon(Icons.Rounded.Close,"Close",Color.White,22.dp) }
+ var muted by remember { mutableStateOf(false) }
+ val text = Color.White
+ val secondary = Color.White.copy(alpha = .78f)
+ GlasmioTheme(isDark = dark) {
+  GlasmioBackdropHost(
+   modifier = Modifier.fillMaxSize(),
+   sampledContent = { ProfilePhotoImage(uri, Modifier.fillMaxSize()) },
+   overlayContent = {
+    Box(Modifier.fillMaxSize()) {
+     GlasmioIconButton(onClick=onClose,size=46.dp,emphasis=GlassEmphasis.Prominent,navigationSurfaceColor=Color(0xFF25272B),modifier=Modifier.align(Alignment.TopEnd).padding(22.dp).border(1.dp,Brush.linearGradient(listOf(Color.White.copy(alpha=.7f),Color.White.copy(alpha=.12f))),CircleShape)) {
+      GrafIcon(Icons.Rounded.Close,"Закрыть",text,22.dp)
+     }
+     Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=18.dp, vertical=34.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.Top) {
+      ProfileGlasmioAction(Icons.Rounded.PhotoCamera,"Фото",text,secondary,onClose)
+      ProfileGlasmioAction(Icons.Rounded.Edit,"Изменить",text,secondary,onClose)
+      ProfileGlasmioAction(Icons.Rounded.Settings,"Настройки",text,secondary,onClose)
+      ProfileGlasmioAction(if(muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications,"Беззвучно",text,secondary,{muted=!muted})
+     }
+    }
+   }
+  )
  }
 }
