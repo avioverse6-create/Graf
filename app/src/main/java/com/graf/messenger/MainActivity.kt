@@ -404,7 +404,7 @@ private fun PostsScreen(dark:Boolean, foreground:Color, secondary:Color, onScrol
  val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if(uri!=null){ runCatching { context.contentResolver.takePersistableUriPermission(uri,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }; attachment=uri } }
  LaunchedEffect(listState,mode,activeChat) {
   var oldIndex=0; var oldOffset=0
-  kotlinx.coroutines.flow.snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (index,offset) ->
+  snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (index,offset) ->
    if(index>oldIndex || (index==oldIndex && offset>oldOffset)) onScrollChrome(index==0 && offset<36)
    if(index<oldIndex || (index==oldIndex && offset<oldOffset)) onScrollChrome(true)
    oldIndex=index; oldOffset=offset
