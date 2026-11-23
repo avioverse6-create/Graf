@@ -13,8 +13,8 @@ android {
         applicationId = "com.graf.messenger"
         minSdk = 33
         targetSdk = 36
-        versionCode = 38
-        versionName = "0.1.37"
+        versionCode = 39
+        versionName = "0.1.38"
     }
 
     buildFeatures { compose = true }
