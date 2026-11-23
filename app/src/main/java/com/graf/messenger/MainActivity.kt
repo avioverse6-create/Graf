@@ -378,6 +378,58 @@ private val GrafEditIcon: ImageVector by lazy {
 }
 
 
+private fun loadGrafDemoMessages(
+    context: android.content.Context,
+    fallback: Map<String, List<GrafDemoMessage>>
+): Map<String, List<GrafDemoMessage>> {
+    val raw = context.getSharedPreferences("graf_demo_chat", 0).getString("messages", null) ?: return fallback
+    return runCatching {
+        val root = org.json.JSONObject(raw)
+        val result = mutableMapOf<String, List<GrafDemoMessage>>()
+        val keys = root.keys()
+        while (keys.hasNext()) {
+            val key = keys.next()
+            val array = root.optJSONArray(key) ?: continue
+            val items = mutableListOf<GrafDemoMessage>()
+            for (index in 0 until array.length()) {
+                val item = array.optJSONObject(index) ?: continue
+                items += GrafDemoMessage(
+                    id = item.optLong("id", System.currentTimeMillis() + index),
+                    text = item.optString("text", ""),
+                    outgoing = item.optBoolean("outgoing", false),
+                    time = item.optString("time", ""),
+                    replyTo = item.optString("replyTo").takeIf { it.isNotEmpty() },
+                    photoUri = item.optString("photoUri").takeIf { it.isNotEmpty() }
+                )
+            }
+            result[key] = items
+        }
+        if (result.isEmpty()) fallback else result
+    }.getOrDefault(fallback)
+}
+
+private fun saveGrafDemoMessages(context: android.content.Context, messages: Map<String, List<GrafDemoMessage>>) {
+    runCatching {
+        val root = org.json.JSONObject()
+        messages.forEach { (key, list) ->
+            val array = org.json.JSONArray()
+            list.forEach { message ->
+                array.put(
+                    org.json.JSONObject()
+                        .put("id", message.id)
+                        .put("text", message.text)
+                        .put("outgoing", message.outgoing)
+                        .put("time", message.time)
+                        .put("replyTo", message.replyTo ?: org.json.JSONObject.NULL)
+                        .put("photoUri", message.photoUri ?: org.json.JSONObject.NULL)
+                )
+            }
+            root.put(key, array)
+        }
+        context.getSharedPreferences("graf_demo_chat", 0).edit().putString("messages", root.toString()).apply()
+    }
+}
+
 private data class GrafDemoMessage(
     val id: Long,
     val text: String,
@@ -422,33 +474,27 @@ private fun ChatsScreen(
     var pendingPhoto by remember { mutableStateOf<Uri?>(null) }
     var emojiPickerOpen by remember { mutableStateOf(false) }
     var reactions by remember { mutableStateOf(mapOf<Long, String>()) }
-    var messagesByChat by remember {
-        mutableStateOf(
-            mapOf(
-                "@alicia" to listOf(
-                    GrafDemoMessage(1L, "Привет! Как тебе новый Graf? 💙", false, "12:38"),
-                    GrafDemoMessage(2L, "Очень нравится стеклянный интерфейс!", true, "12:40"),
-                    GrafDemoMessage(3L, "Отправила тебе фото ✨", false, "12:42")
-                ),
-                "@graf_team" to listOf(
-                    GrafDemoMessage(4L, "Собрали новый экран чатов.", false, "11:12"),
-                    GrafDemoMessage(5L, "Новый дизайн уже готов", false, "11:18")
-                ),
-                "@max_dev" to listOf(
-                    GrafDemoMessage(6L, "Давай обсудим идею", false, "Вчера")
-                ),
-                "@design_room" to listOf(
-                    GrafDemoMessage(7L, "Артём: выглядит отлично!", false, "Пн")
-                ),
-                "@nikita" to listOf(
-                    GrafDemoMessage(8L, "Увидимся вечером?", false, "Вс")
-                )
-            )
+    val context = LocalContext.current
+    val seedMessages = remember {
+        mapOf(
+            "@alicia" to listOf(
+                GrafDemoMessage(1L, "Привет! Как тебе новый Graf? 💙", false, "12:38"),
+                GrafDemoMessage(2L, "Очень нравится стеклянный интерфейс!", true, "12:40"),
+                GrafDemoMessage(3L, "Отправила тебе фото ✨", false, "12:42")
+            ),
+            "@graf_team" to listOf(
+                GrafDemoMessage(4L, "Собрали новый экран чатов.", false, "11:12"),
+                GrafDemoMessage(5L, "Новый дизайн уже готов", false, "11:18")
+            ),
+            "@max_dev" to listOf(GrafDemoMessage(6L, "Давай обсудим идею", false, "Вчера")),
+            "@design_room" to listOf(GrafDemoMessage(7L, "Артём: выглядит отлично!", false, "Пн")),
+            "@nikita" to listOf(GrafDemoMessage(8L, "Увидимся вечером?", false, "Вс"))
         )
     }
+    var messagesByChat by remember { mutableStateOf(loadGrafDemoMessages(context, seedMessages)) }
+    LaunchedEffect(messagesByChat) { saveGrafDemoMessages(context, messagesByChat) }
     val chatListState = rememberLazyListState()
     val messageListState = rememberLazyListState()
-    val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
