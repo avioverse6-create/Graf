@@ -105,6 +105,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.ChatBubbleOutline
+import androidx.compose.material.icons.rounded.Send
+import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.VolumeOff
 import io.github.neoruaa.glasmio.core.GlasmioTheme
@@ -504,10 +509,9 @@ private fun PostsScreen(
     if (activePost != null) {
         androidx.compose.ui.window.Dialog(onDismissRequest = { activePost = null; attachment = null },
             properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
-            Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)
-                .clip(androidx.compose.foundation.shape.RoundedCornerShape(28.dp)).background(Color(0xFF17191D))
-                .border(1.dp, Color.White.copy(alpha = .18f), androidx.compose.foundation.shape.RoundedCornerShape(28.dp))
-                .padding(18.dp)) {
+            GlassSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
+                shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)) {
+              Column(Modifier.fillMaxWidth().padding(18.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text("Комментарии", color = foreground, fontSize = 19.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
                     GlasmioIconButton(onClick = { activePost = null; attachment = null }, size = 36.dp) {
@@ -565,6 +569,7 @@ private fun PostsScreen(
                         }
                     }, size = 40.dp) { GrafIcon(Icons.Rounded.Send, "Отправить", foreground, 18.dp) }
                 }
+              }
             }
         }
     }
