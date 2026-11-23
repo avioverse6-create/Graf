@@ -186,6 +186,7 @@ private fun GrafApp() {
  val prefs=remember { context.getSharedPreferences("graf_prefs",0) }
  val dark = true
  var selectedTab by remember { mutableIntStateOf(0) }
+ var bottomBarVisible by remember { mutableStateOf(true) }
  var settingsOpen by remember { mutableStateOf(false) }
  var profileName by remember { mutableStateOf(prefs.getString("profile_name","Alicia Brown") ?: "Alicia Brown") }
  var profileUsername by remember { mutableStateOf(prefs.getString("profile_username","username") ?: "username") }
@@ -252,7 +253,7 @@ private fun GrafApp() {
         onFontPick={fontPicker.launch(arrayOf("font/ttf","application/x-font-ttf","application/octet-stream"))},
         onFontReset={customFontPath=null;prefs.edit().remove("font_path").apply()},hasCustomFont=customFontPath!=null)
        else -> when(GrafTab.entries[state.second]) {
-        GrafTab.Home -> PostsScreen(dark,foreground,secondary,query,{query=it})
+        GrafTab.Home -> PostsScreen(dark,foreground,secondary,{ bottomBarVisible=it })
         GrafTab.Contact -> ContactsScreen(dark,foreground,secondary)
         GrafTab.Search -> SearchScreen(query,{query=it},dark,foreground,secondary) { channelOpen=false }
         GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,
@@ -271,9 +272,13 @@ private fun GrafApp() {
     }
    }
    if(!channelOpen) {
-    PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it;settingsOpen=false},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
-     modifier=Modifier.align(Alignment.BottomCenter).padding(horizontal=20.dp,vertical=10.dp).fillMaxWidth()) {
-      GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index;settingsOpen=false } }
+    AnimatedVisibility(visible=bottomBarVisible || selectedTab!=0 || settingsOpen,modifier=Modifier.align(Alignment.BottomCenter),
+     enter=androidx.compose.animation.slideInVertically(initialOffsetY={it})+fadeIn(),
+     exit=androidx.compose.animation.slideOutVertically(targetOffsetY={it})+fadeOut()) {
+     PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it;settingsOpen=false;bottomBarVisible=true},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
+      modifier=Modifier.padding(horizontal=20.dp,vertical=10.dp).fillMaxWidth()) {
+      GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index;settingsOpen=false;bottomBarVisible=true } }
+     }
     }
    }
    if(photoViewer && profilePhoto!=null) ProfilePhotoViewer(profilePhoto!!,dark) { photoViewer=false }
@@ -375,208 +380,140 @@ private val GrafEditIcon: ImageVector by lazy {
 }
 
 @Composable
-private fun PostsScreen(
-    dark: Boolean, foreground: Color, secondary: Color, query: String, onQuery: (String) -> Unit,
-) {
-    data class FeedPost(val name: String, val handle: String, val time: String, val body: String, val likes: Int, val replies: Int, val imageUrl: String? = null)
-    val posts = listOf(
-        FeedPost("Graf", "@graf_app", "2 мин", "Добро пожаловать в Graf — место для коротких мыслей, красивых кадров и общения.", 128, 24, "https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=1200&auto=format&fit=crop&q=85"),
-        FeedPost("Алиса", "@alicia", "18 мин", "Утро, любимый кофе и немного времени для себя ☕", 42, 8, "https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1200&auto=format&fit=crop&q=85"),
-        FeedPost("Технологии", "@tech_daily", "34 мин", "Новые идеи становятся реальностью, когда над ними работают каждый день.", 76, 13),
-        FeedPost("Музыка дня", "@music_now", "1 ч", "Какой трек у вас сегодня на повторе? Делитесь находками 🎧", 31, 19, "https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1200&auto=format&fit=crop&q=85"),
-        FeedPost("Путешествия", "@go_explore", "2 ч", "Небольшая прогулка по незнакомому городу иногда запоминается сильнее большого путешествия.", 93, 6, "https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=1200&auto=format&fit=crop&q=85"),
-        FeedPost("Дизайн", "@pixel_notes", "3 ч", "Хороший интерфейс не мешает — он помогает сосредоточиться на главном.", 58, 11),
-        FeedPost("Кино", "@frame_by_frame", "4 ч", "Вечер для хорошего фильма и полного погружения в историю 🍿", 27, 4, "https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&auto=format&fit=crop&q=85"),
-        FeedPost("Наука", "@curious_mind", "5 ч", "Любопытство — отличный повод задать ещё один вопрос.", 64, 9),
-        FeedPost("Спорт", "@daily_motion", "6 ч", "Главное — не идеальный результат, а регулярность и удовольствие от процесса.", 49, 7, "https://images.unsplash.com/photo-1530549387789-4c1017266635?w=1200&auto=format&fit=crop&q=85"),
-        FeedPost("Graf", "@graf_app", "Вчера", "Это ваша лента публикаций. Листайте, читайте и присоединяйтесь к обсуждению.", 112, 17)
-    )
-    var feedMode by remember { mutableStateOf("Grafs") }
-    var menuExpanded by remember { mutableStateOf(false) }
-    var activePost by remember { mutableStateOf<FeedPost?>(null) }
-    var commentText by remember { mutableStateOf("") }
-    var attachment by remember { mutableStateOf<Uri?>(null) }
-    var comments by remember { mutableStateOf(mapOf<String, List<String>>()) }
-    var likedPosts by remember { mutableStateOf(setOf<String>()) }
-    val context = LocalContext.current
-    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
-            runCatching { context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-            attachment = uri
+private fun PostsScreen(dark:Boolean, foreground:Color, secondary:Color, onScrollChrome:(Boolean)->Unit) {
+ data class Post(val name:String,val handle:String,val time:String,val body:String,val likes:Int,val replies:Int,val photo:String?=null)
+ data class Chat(val name:String,val handle:String,val preview:String,val time:String,val unread:Int)
+ val posts=listOf(
+  Post("Graf","@graf_app","2 мин","Добро пожаловать в Graf — место для коротких мыслей, красивых кадров и общения.",128,24,"https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=1200&auto=format&fit=crop&q=85"),
+  Post("Алиса","@alicia","18 мин","Утро, любимый кофе и немного времени для себя ☕",42,8,"https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1200&auto=format&fit=crop&q=85"),
+  Post("Технологии","@tech_daily","34 мин","Новые идеи становятся реальностью, когда над ними работают каждый день.",76,13),
+  Post("Музыка дня","@music_now","1 ч","Какой трек у вас сегодня на повторе? 🎧",31,19,"https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1200&auto=format&fit=crop&q=85"),
+  Post("Путешествия","@go_explore","2 ч","Небольшая прогулка по незнакомому городу иногда запоминается сильнее большого путешествия.",93,6,"https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=1200&auto=format&fit=crop&q=85"),
+  Post("Дизайн","@pixel_notes","3 ч","Хороший интерфейс не мешает — он помогает сосредоточиться на главном.",58,11),
+  Post("Кино","@frame_by_frame","4 ч","Вечер для хорошего фильма 🍿",27,4,"https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&auto=format&fit=crop&q=85"),
+  Post("Наука","@curious_mind","5 ч","Любопытство — отличный повод задать ещё один вопрос.",64,9),
+  Post("Спорт","@daily_motion","6 ч","Главное — регулярность и удовольствие от процесса.",49,7,"https://images.unsplash.com/photo-1530549387789-4c1017266635?w=1200&auto=format&fit=crop&q=85")
+ )
+ val chats=listOf(Chat("Алиса Brown","@alicia","Отправила тебе фото ✨","12:42",2),Chat("Graf Team","@graf_team","Новый дизайн уже готов","11:18",1),Chat("Максим","@max_dev","Давай обсудим идею","Вчера",0),Chat("Дизайн / идеи","@design_room","Артём: выглядит отлично!","Пн",0))
+ var mode by remember { mutableStateOf("Grafs") }; var menu by remember { mutableStateOf(false) }
+ var activePost by remember { mutableStateOf<Post?>(null) }; var comment by remember { mutableStateOf("") }
+ var attachment by remember { mutableStateOf<Uri?>(null) }; var comments by remember { mutableStateOf(mapOf<String,List<String>>()) }
+ var likes by remember { mutableStateOf(setOf<String>()) }; var activeChat by remember { mutableStateOf<Chat?>(null) }
+ var draft by remember { mutableStateOf("") }; var messages by remember { mutableStateOf(mapOf<String,List<String>>()) }
+ val listState= rememberLazyListState(); val context=LocalContext.current
+ val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if(uri!=null){ runCatching { context.contentResolver.takePersistableUriPermission(uri,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }; attachment=uri } }
+ LaunchedEffect(listState,mode,activeChat) {
+  var oldIndex=0; var oldOffset=0
+  kotlinx.coroutines.flow.snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (index,offset) ->
+   if(index>oldIndex || (index==oldIndex && offset>oldOffset)) onScrollChrome(index==0 && offset<36)
+   if(index<oldIndex || (index==oldIndex && offset<oldOffset)) onScrollChrome(true)
+   oldIndex=index; oldOffset=offset
+  }
+ }
+ GlasmioTheme(isDark=dark) {
+  GlasmioBackdropHost(modifier=Modifier.fillMaxSize(),sampledContent={
+   Box(Modifier.fillMaxSize().background(Color(0xFF050608))) {
+    when {
+     activeChat!=null -> {
+      val chat=activeChat!!; val msgs=messages[chat.handle].orEmpty()
+      Column(Modifier.fillMaxSize()) {
+       LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(top=70.dp,start=16.dp,end=16.dp,bottom=16.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
+        items(msgs) { msg -> Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
+         Box(Modifier.widthIn(max=290.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp,18.dp,5.dp,18.dp)).background(Color(0xFF183D62)).padding(12.dp)){ Text(msg,color=Color.White,fontSize=14.sp) }
+        } }
+        if(msgs.isEmpty()) item { Text("Начните общение — отправьте первое сообщение.",color=secondary,fontSize=13.sp,modifier=Modifier.fillMaxWidth().padding(top=45.dp),textAlign=TextAlign.Center) }
+       }
+       Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
+        Box(Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(22.dp)).background(Color(0xFF202329)).padding(13.dp)) {
+         if(draft.isEmpty()) Text("Сообщение…",color=secondary,fontSize=14.sp)
+         BasicTextField(value=draft,onValueChange={draft=it},textStyle=TextStyle(color=foreground,fontSize=14.sp),modifier=Modifier.fillMaxWidth())
         }
+        Spacer(Modifier.width(8.dp))
+        GlasmioIconButton(onClick={ if(draft.isNotBlank()){ messages=messages+(chat.handle to (messages[chat.handle].orEmpty()+draft.trim()));draft="" } },size=44.dp){ GrafIcon(Icons.Rounded.Send,"Отправить",foreground,19.dp) }
+       }
+      }
+     }
+     mode=="Grafs" -> LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(start=16.dp,end=16.dp,top=66.dp,bottom=116.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
+      items(posts) { post ->
+       val key=post.handle+post.time; val liked=key in likes; val postComments=comments[key].orEmpty()
+       Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(23.dp)).background(Color(0xFF17191D)).border(1.dp,Color.White.copy(alpha=.14f),androidx.compose.foundation.shape.RoundedCornerShape(23.dp)).padding(15.dp)) {
+        Row(verticalAlignment=Alignment.CenterVertically) {
+         Box(Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF30343B)),contentAlignment=Alignment.Center){ Text(post.name.take(1),color=foreground,fontWeight=FontWeight.Bold) }
+         Spacer(Modifier.width(10.dp)); Column(Modifier.weight(1f)){ Text(post.name,color=foreground,fontSize=14.sp,fontWeight=FontWeight.Bold);Text(post.handle,color=secondary,fontSize=11.sp) }
+         Text(post.time,color=secondary,fontSize=11.sp); GrafIcon(Icons.Rounded.MoreHoriz,"Ещё",secondary,20.dp)
+        }
+        Spacer(Modifier.height(12.dp)); Text(post.body,color=foreground,fontSize=14.sp,lineHeight=20.sp)
+        if(post.photo!=null){ Spacer(Modifier.height(12.dp));coil.compose.AsyncImage(model=post.photo,contentDescription="Фото публикации",contentScale=androidx.compose.ui.layout.ContentScale.Crop,modifier=Modifier.fillMaxWidth().height(205.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(17.dp))) }
+        Spacer(Modifier.height(12.dp))
+        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
+         Row(Modifier.clickable { likes=if(liked) likes-key else likes+key },verticalAlignment=Alignment.CenterVertically){ GrafIcon(if(liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,"Нравится",if(liked) Color(0xFFFF5577) else secondary,20.dp);Spacer(Modifier.width(6.dp));Text((post.likes+if(liked)1 else 0).toString(),color=secondary,fontSize=12.sp) }
+         Spacer(Modifier.width(18.dp))
+         Row(Modifier.clickable { activePost=post;comment="";attachment=null },verticalAlignment=Alignment.CenterVertically){ GrafIcon(Icons.Rounded.ChatBubbleOutline,"Комментарии",secondary,19.dp);Spacer(Modifier.width(6.dp));Text((post.replies+postComments.size).toString(),color=secondary,fontSize=12.sp) }
+         Spacer(Modifier.weight(1f));GrafIcon(Icons.Rounded.Send,"Поделиться",secondary,19.dp)
+        }
+        if(postComments.isNotEmpty()){ Spacer(Modifier.height(7.dp));Text("Последний комментарий: ${postComments.last()}",color=secondary,fontSize=11.sp,maxLines=2,overflow=TextOverflow.Ellipsis) }
+       }
+      }
+     }
+     else -> LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(top=68.dp,bottom=100.dp)) {
+      items(chats) { chat ->
+       Row(Modifier.fillMaxWidth().clickable { activeChat=chat;draft="" }.padding(horizontal=18.dp,vertical=14.dp),verticalAlignment=Alignment.CenterVertically) {
+        Box(Modifier.size(52.dp).clip(CircleShape).background(Color(0xFF242A33)),contentAlignment=Alignment.Center){ Text(chat.name.take(1),color=foreground,fontSize=19.sp,fontWeight=FontWeight.Bold) }
+        Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(chat.name,color=foreground,fontSize=15.sp,fontWeight=FontWeight.SemiBold);Text(chat.preview,color=secondary,fontSize=12.sp,maxLines=1)}
+        Column(horizontalAlignment=Alignment.End){Text(chat.time,color=secondary,fontSize=10.sp);if(chat.unread>0) Text(chat.unread.toString(),color=Blue,fontSize=11.sp) }
+       }
+       Box(Modifier.fillMaxWidth().padding(start=82.dp).height(.5.dp).background(Color.White.copy(alpha=.09f)))
+      }
+     }
     }
-    val filtered = posts.filter { query.isBlank() || it.name.contains(query, true) || it.handle.contains(query, true) || it.body.contains(query, true) }
-    Column(Modifier.fillMaxSize()) {
-        Box(Modifier.fillMaxWidth().height(54.dp), contentAlignment = Alignment.Center) {
-            Text("GRAF", color = foreground, fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold,
-                fontSize = 25.sp, letterSpacing = 4.sp,
-                modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                    .clickable { menuExpanded = true }.padding(horizontal = 18.dp, vertical = 7.dp))
-            androidx.compose.material.DropdownMenu(
-                expanded = menuExpanded,
-                onDismissRequest = { menuExpanded = false }
-            ) {
-                androidx.compose.material.DropdownMenuItem(onClick = {
-                    feedMode = "Grafs"; menuExpanded = false
-                }) { Text("Grafs") }
-                androidx.compose.material.DropdownMenuItem(onClick = {
-                    feedMode = "Chats"; menuExpanded = false
-                }) { Text("Chats") }
-            }
-        }
-        if (feedMode == "Grafs") {
-            GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 6.dp)) {
-                Row(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                    GrafIcon(Icons.Rounded.Search, "Поиск", secondary, 20.dp)
-                    Spacer(Modifier.width(10.dp))
-                    BasicTextField(value = query, onValueChange = onQuery, singleLine = true,
-                        textStyle = TextStyle(color = foreground, fontSize = 15.sp),
-                        decorationBox = { inner -> Box { if (query.isEmpty()) Text("Поиск публикаций", color = secondary, fontSize = 15.sp); inner() } },
-                        modifier = Modifier.fillMaxWidth())
-                }
-            }
-            LazyColumn(Modifier.fillMaxSize(), contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 110.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                items(filtered) { post ->
-                    val postKey = post.handle + post.time
-                    val liked = likedPosts.contains(postKey)
-                    val postComments = comments[postKey].orEmpty()
-                    Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(23.dp))
-                        .background(if (dark) Color(0xFF17191D) else Color(0xFFF3F4F7))
-                        .border(1.dp, if (dark) Color.White.copy(alpha = .14f) else Color.Black.copy(alpha = .08f), androidx.compose.foundation.shape.RoundedCornerShape(23.dp))
-                        .padding(horizontal = 15.dp, vertical = 14.dp)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Box(Modifier.size(40.dp).clip(CircleShape).background(if (dark) Color(0xFF30343B) else Color(0xFFE1E4E8)), contentAlignment = Alignment.Center) {
-                                Text(post.name.take(1).uppercase(), color = foreground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                            }
-                            Spacer(Modifier.width(10.dp))
-                            Column(Modifier.weight(1f)) {
-                                Text(post.name, color = foreground, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
-                                Text(post.handle, color = secondary, fontSize = 11.sp, maxLines = 1)
-                            }
-                            Text(post.time, color = secondary, fontSize = 11.sp)
-                            Spacer(Modifier.width(4.dp))
-                            GrafIcon(Icons.Rounded.MoreHoriz, "Ещё", secondary, 20.dp)
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        Text(post.body, color = foreground, fontSize = 14.sp, lineHeight = 20.sp)
-                        if (post.imageUrl != null) {
-                            Spacer(Modifier.height(12.dp))
-                            coil.compose.AsyncImage(model = post.imageUrl, contentDescription = "Фото в публикации",
-                                contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                                modifier = Modifier.fillMaxWidth().height(205.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(17.dp)))
-                        }
-                        Spacer(Modifier.height(12.dp))
-                        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                            Row(Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).clickable {
-                                likedPosts = if (liked) likedPosts - postKey else likedPosts + postKey
-                            }.padding(horizontal = 5.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                                GrafIcon(if (liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, "Нравится",
-                                    if (liked) Color(0xFFFF5577) else secondary, 20.dp)
-                                Spacer(Modifier.width(6.dp))
-                                Text((post.likes + if (liked) 1 else 0).toString(), color = secondary, fontSize = 12.sp)
-                            }
-                            Spacer(Modifier.width(17.dp))
-                            Row(Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).clickable {
-                                activePost = post; commentText = ""; attachment = null
-                            }.padding(horizontal = 5.dp, vertical = 5.dp), verticalAlignment = Alignment.CenterVertically) {
-                                GrafIcon(Icons.Rounded.ChatBubbleOutline, "Комментарии", secondary, 19.dp)
-                                Spacer(Modifier.width(6.dp))
-                                Text((post.replies + postComments.size).toString(), color = secondary, fontSize = 12.sp)
-                            }
-                            Spacer(Modifier.weight(1f))
-                            GrafIcon(Icons.Rounded.Send, "Поделиться", secondary, 19.dp)
-                        }
-                        if (postComments.isNotEmpty()) {
-                            Spacer(Modifier.height(7.dp))
-                            Text("Последний комментарий: ${postComments.last()}", color = secondary, fontSize = 11.sp,
-                                maxLines = 2, overflow = TextOverflow.Ellipsis)
-                        }
-                    }
-                }
-                if (filtered.isEmpty()) item {
-                    Text("Публикаций не найдено", color = secondary, fontSize = 13.sp,
-                        modifier = Modifier.fillMaxWidth().padding(28.dp), textAlign = TextAlign.Center)
-                }
-            }
-        } else {
-            Column(Modifier.fillMaxSize().padding(horizontal = 20.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Spacer(Modifier.height(80.dp))
-                GrafIcon(Icons.Rounded.ChatBubbleOutline, "Чаты", secondary, 42.dp)
-                Spacer(Modifier.height(14.dp))
-                Text("Chats", color = foreground, fontSize = 21.sp, fontWeight = FontWeight.SemiBold)
-                Spacer(Modifier.height(6.dp))
-                Text("Здесь будут ваши личные переписки", color = secondary, fontSize = 13.sp, textAlign = TextAlign.Center)
-            }
-        }
+   }
+  },overlayContent={
+   Column(Modifier.fillMaxSize()) {
+    GlassSurface(modifier=Modifier.fillMaxWidth().padding(horizontal=12.dp).height(56.dp),shape=androidx.compose.foundation.shape.RoundedCornerShape(20.dp)) {
+     Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
+      if(activeChat!=null) GlasmioIconButton(onClick={activeChat=null},size=36.dp,modifier=Modifier.align(Alignment.CenterStart).padding(start=8.dp)){ GrafIcon(Icons.Rounded.ArrowBack,"Назад",foreground,20.dp) }
+      GlasmioMenu(expanded=menu,onExpandedChange={menu=it},itemCount=2,centerHorizontally=true,forceBelowAnchor=true,menuWidth=224.dp,
+       anchor={open->Text("GRAF",color=foreground,fontFamily=FontFamily.Serif,fontWeight=FontWeight.Bold,fontSize=25.sp,letterSpacing=4.sp,modifier=Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).clickable(onClick=open).padding(horizontal=18.dp,vertical=7.dp))}
+      ){ backdrop,close ->
+       GlasmioMenuItem(title="Grafs",subtitle="Лента публикаций",onClick={mode="Grafs";activeChat=null;menu=false;close()},systemName="square.grid.2x2",backdrop=backdrop,enabled=true)
+       GlasmioMenuItem(title="Chats",subtitle="Личные сообщения",onClick={mode="Chats";activeChat=null;menu=false;close()},systemName="bubble.left.and.bubble.right",backdrop=backdrop,enabled=true)
+      }
+     }
     }
-    if (activePost != null) {
-        androidx.compose.ui.window.Dialog(onDismissRequest = { activePost = null; attachment = null },
-            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false)) {
-            GlassSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-                shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)) {
-              Column(Modifier.fillMaxWidth().padding(18.dp)) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text("Комментарии", color = foreground, fontSize = 19.sp, fontWeight = FontWeight.Bold, modifier = Modifier.weight(1f))
-                    GlasmioIconButton(onClick = { activePost = null; attachment = null }, size = 36.dp) {
-                        GrafIcon(Icons.Rounded.Close, "Закрыть", foreground, 18.dp)
-                    }
-                }
-                Spacer(Modifier.height(12.dp))
-                Text(activePost!!.body, color = secondary, fontSize = 13.sp, maxLines = 3, overflow = TextOverflow.Ellipsis)
-                Spacer(Modifier.height(12.dp))
-                val visibleComments = comments[activePost!!.handle + activePost!!.time].orEmpty()
-                if (visibleComments.isEmpty()) Text("Пока нет комментариев. Будь первым!", color = secondary, fontSize = 12.sp,
-                    modifier = Modifier.padding(vertical = 12.dp))
-                else Column(Modifier.heightIn(max = 180.dp).verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                    visibleComments.forEach { message ->
-                        GlassSurface(modifier = Modifier.fillMaxWidth(), shape = androidx.compose.foundation.shape.RoundedCornerShape(16.dp)) {
-                            Text(message, color = foreground, fontSize = 13.sp, modifier = Modifier.padding(11.dp))
-                        }
-                    }
-                }
-                if (attachment != null) {
-                    Spacer(Modifier.height(10.dp))
-                    coil.compose.AsyncImage(model = attachment, contentDescription = "Вложение",
-                        contentScale = androidx.compose.ui.layout.ContentScale.Crop,
-                        modifier = Modifier.size(76.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(13.dp)))
-                }
-                Spacer(Modifier.height(12.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-                    listOf("❤️", "😂", "🔥", "✨", "👍", "🥰").forEach { sticker ->
-                        Text(sticker, modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                            .background(Color.White.copy(alpha = .07f)).clickable { commentText += sticker }.padding(7.dp), fontSize = 18.sp)
-                    }
-                }
-                Spacer(Modifier.height(10.dp))
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    GlasmioIconButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, size = 38.dp) {
-                        GrafIcon(Icons.Rounded.AddPhotoAlternate, "Добавить фото", secondary, 19.dp)
-                    }
-                    Spacer(Modifier.width(8.dp))
-                    Box(Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp))
-                        .background(Color.White.copy(alpha = .07f)).padding(horizontal = 12.dp, vertical = 11.dp)) {
-                        if (commentText.isEmpty()) Text("Написать комментарий…", color = secondary, fontSize = 12.sp)
-                        BasicTextField(value = commentText, onValueChange = { commentText = it },
-                            textStyle = TextStyle(color = foreground, fontSize = 13.sp), modifier = Modifier.fillMaxWidth())
-                    }
-                    Spacer(Modifier.width(7.dp))
-                    GlasmioIconButton(onClick = {
-                        val message = buildString {
-                            append(commentText.trim())
-                            if (attachment != null) { if (isNotEmpty()) append(" "); append("📷 Фото") }
-                        }
-                        if (message.isNotBlank()) {
-                            val key = activePost!!.handle + activePost!!.time
-                            comments = comments + (key to (comments[key].orEmpty() + message))
-                            commentText = ""; attachment = null
-                        }
-                    }, size = 40.dp) { GrafIcon(Icons.Rounded.Send, "Отправить", foreground, 18.dp) }
-                }
-              }
-            }
-        }
+    Spacer(Modifier.weight(1f))
+   }
+   if(activePost!=null) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.65f)),contentAlignment=Alignment.Center) {
+    GlassSurface(modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp),shape=androidx.compose.foundation.shape.RoundedCornerShape(26.dp)) {
+     Column(Modifier.fillMaxWidth().padding(16.dp)) {
+      Row(verticalAlignment=Alignment.CenterVertically){Text("Комментарии",color=foreground,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));GlasmioIconButton(onClick={activePost=null;attachment=null},size=36.dp){GrafIcon(Icons.Rounded.Close,"Закрыть",foreground,18.dp)}}
+      Spacer(Modifier.height(9.dp));Text(activePost!!.body,color=secondary,fontSize=13.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
+      val key=activePost!!.handle+activePost!!.time;val list=comments[key].orEmpty()
+      Column(Modifier.heightIn(max=180.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(7.dp)){
+       if(list.isEmpty()) Text("Пока нет комментариев. Будь первым!",color=secondary,fontSize=12.sp,modifier=Modifier.padding(vertical=12.dp))
+       list.forEach { msg -> Box(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).background(Color.White.copy(alpha=.07f)).padding(11.dp)){Text(msg,color=foreground,fontSize=13.sp)} }
+      }
+      if(attachment!=null){Spacer(Modifier.height(8.dp));coil.compose.AsyncImage(model=attachment,contentDescription="Фото",modifier=Modifier.size(68.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),contentScale=androidx.compose.ui.layout.ContentScale.Crop)}
+      Spacer(Modifier.height(9.dp))
+      Row(horizontalArrangement=Arrangement.spacedBy(5.dp)){listOf("❤️","😂","🔥","✨","👍","🥰").forEach{ e->Text(e,Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(Color.White.copy(alpha=.07f)).clickable{comment+=e}.padding(7.dp),fontSize=17.sp)}}
+      Spacer(Modifier.height(9.dp))
+      Row(verticalAlignment=Alignment.CenterVertically){
+       GlasmioIconButton(onClick={picker.launch(arrayOf("image/*"))},size=38.dp){GrafIcon(Icons.Rounded.AddPhotoAlternate,"Добавить фото",secondary,19.dp)}
+       Spacer(Modifier.width(7.dp))
+       Box(Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(17.dp)).background(Color.White.copy(alpha=.08f)).padding(horizontal=11.dp,vertical=12.dp)){
+        if(comment.isEmpty())Text("Написать комментарий…",color=secondary,fontSize=12.sp)
+        BasicTextField(value=comment,onValueChange={comment=it},textStyle=TextStyle(color=foreground,fontSize=13.sp),modifier=Modifier.fillMaxWidth())
+       }
+       Spacer(Modifier.width(7.dp))
+       GlasmioIconButton(onClick={
+        val msg=buildString{append(comment.trim());if(attachment!=null){if(isNotEmpty())append(" ");append("📷 Фото")}}
+        if(msg.isNotBlank()){comments=comments+(key to (comments[key].orEmpty()+msg));comment="";attachment=null}
+       },size=40.dp){GrafIcon(Icons.Rounded.Send,"Отправить",foreground,18.dp)}
+      }
+     }
     }
+   }
+  })
+ }
 }
 
 @Composable
