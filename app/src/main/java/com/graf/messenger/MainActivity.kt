@@ -398,8 +398,8 @@ private fun loadGrafDemoMessages(
                     text = item.optString("text", ""),
                     outgoing = item.optBoolean("outgoing", false),
                     time = item.optString("time", ""),
-                    replyTo = item.optString("replyTo").takeIf { it.isNotEmpty() },
-                    photoUri = item.optString("photoUri").takeIf { it.isNotEmpty() }
+                    replyTo = if (item.isNull("replyTo")) null else item.optString("replyTo"),
+                    photoUri = if (item.isNull("photoUri")) null else item.optString("photoUri")
                 )
             }
             result[key] = items
