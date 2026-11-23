@@ -11,6 +11,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.material.icons.rounded.Add
 import androidx.compose.material.icons.rounded.Create
 import androidx.compose.material.icons.rounded.Chat
+import kotlinx.coroutines.launch
 import androidx.compose.material.icons.rounded.PersonAdd
 import androidx.compose.material.icons.rounded.Notifications
 import androidx.compose.material.icons.rounded.Circle
@@ -118,6 +119,7 @@ import io.github.neoruaa.glasmio.glass.GlasmioBackdropHost
 import io.github.neoruaa.glasmio.glass.GlassSurface
 import io.github.neoruaa.glasmio.ui.GlasmioButton
 import io.github.neoruaa.glasmio.ui.GlasmioIconButton
+import io.github.neoruaa.glasmio.ui.GlasmioContextMenu
 import io.github.neoruaa.glasmio.ui.GlasmioMenu
 import io.github.neoruaa.glasmio.ui.GlasmioMenuItem
 import com.styropyr0.prismal.PrismalGlass
@@ -174,10 +176,8 @@ private val GrafSettingsCogIcon: ImageVector by lazy {
 }
 
 private enum class GrafTab(val title: String, val icon: ImageVector) {
-    Home("Posts", Icons.Rounded.Home),
-    Contact("Contacts", Icons.Rounded.Contacts),
-    Search("Search", Icons.Rounded.Search),
-    Settings("Settings", Icons.Rounded.Settings)
+    Home("Chats", Icons.Rounded.Chat),
+    Settings("Profile", Icons.Rounded.Person)
 }
 
 @Composable
@@ -209,7 +209,7 @@ private fun GrafApp() {
  }
 
  var photoViewer by remember { mutableStateOf(false) }
- var query by remember { mutableStateOf("") }
+ 
  var profilePhoto by remember { mutableStateOf(prefs.getString("profile_photo",null)?.let(Uri::parse)) }
  var profileColor by remember { mutableIntStateOf(prefs.getInt("profile_color",0xFF8994A5.toInt())) }
  var customFontPath by remember { mutableStateOf(prefs.getString("font_path",null)) }
@@ -244,7 +244,7 @@ private fun GrafApp() {
      AnimatedContent(targetState=Pair(channelOpen,selectedTab),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
       when {
        state.first -> ChannelScreen(dark,foreground,secondary) { channelOpen=false }
-       state.second==3 && settingsOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,iconScale,iconBold,
+       state.second==1 && settingsOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,iconScale,iconBold,
         onBack={settingsOpen=false},onProfileClick={settingsOpen=false},
         onScaleChange={textScale=it;prefs.edit().putFloat("text_scale",it).apply()},
         onBoldChange={boldText=it;prefs.edit().putBoolean("bold_text",it).apply()},
@@ -253,9 +253,7 @@ private fun GrafApp() {
         onFontPick={fontPicker.launch(arrayOf("font/ttf","application/x-font-ttf","application/octet-stream"))},
         onFontReset={customFontPath=null;prefs.edit().remove("font_path").apply()},hasCustomFont=customFontPath!=null)
        else -> when(GrafTab.entries[state.second]) {
-        GrafTab.Home -> PostsScreen(dark,foreground,secondary,{ bottomBarVisible=it })
-        GrafTab.Contact -> ContactsScreen(dark,foreground,secondary)
-        GrafTab.Search -> SearchScreen(query,{query=it},dark,foreground,secondary) { channelOpen=false }
+        GrafTab.Home -> ChatsScreen(dark,foreground,secondary,textScale,{ textScale=it; prefs.edit().putFloat("text_scale",it).apply() },{ bottomBarVisible=it })
         GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,
          onBack={selectedTab=0},onOpenSettings={settingsOpen=true},onPhoto={photoPicker.launch(arrayOf("image/*"))},
          onViewPhoto={if(profilePhoto!=null) photoViewer=true else photoPicker.launch(arrayOf("image/*"))},
@@ -379,142 +377,520 @@ private val GrafEditIcon: ImageVector by lazy {
     }.getOrElse { Icons.Rounded.Edit }
 }
 
+
+private data class GrafDemoMessage(
+    val id: Long,
+    val text: String,
+    val outgoing: Boolean,
+    val time: String,
+    val replyTo: String? = null,
+    val photoUri: String? = null
+)
+
 @Composable
-private fun PostsScreen(dark:Boolean, foreground:Color, secondary:Color, onScrollChrome:(Boolean)->Unit) {
- data class Post(val name:String,val handle:String,val time:String,val body:String,val likes:Int,val replies:Int,val photo:String?=null)
- data class Chat(val name:String,val handle:String,val preview:String,val time:String,val unread:Int)
- val posts=listOf(
-  Post("Graf","@graf_app","2 мин","Добро пожаловать в Graf — место для коротких мыслей, красивых кадров и общения.",128,24,"https://images.unsplash.com/photo-1470252649378-9c29740c9fa8?w=1200&auto=format&fit=crop&q=85"),
-  Post("Алиса","@alicia","18 мин","Утро, любимый кофе и немного времени для себя ☕",42,8,"https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=1200&auto=format&fit=crop&q=85"),
-  Post("Технологии","@tech_daily","34 мин","Новые идеи становятся реальностью, когда над ними работают каждый день.",76,13),
-  Post("Музыка дня","@music_now","1 ч","Какой трек у вас сегодня на повторе? 🎧",31,19,"https://images.unsplash.com/photo-1511379938547-c1f69419868d?w=1200&auto=format&fit=crop&q=85"),
-  Post("Путешествия","@go_explore","2 ч","Небольшая прогулка по незнакомому городу иногда запоминается сильнее большого путешествия.",93,6,"https://images.unsplash.com/photo-1470770841072-f978cf4d019e?w=1200&auto=format&fit=crop&q=85"),
-  Post("Дизайн","@pixel_notes","3 ч","Хороший интерфейс не мешает — он помогает сосредоточиться на главном.",58,11),
-  Post("Кино","@frame_by_frame","4 ч","Вечер для хорошего фильма 🍿",27,4,"https://images.unsplash.com/photo-1489599849927-2ee91cede3ba?w=1200&auto=format&fit=crop&q=85"),
-  Post("Наука","@curious_mind","5 ч","Любопытство — отличный повод задать ещё один вопрос.",64,9),
-  Post("Спорт","@daily_motion","6 ч","Главное — регулярность и удовольствие от процесса.",49,7,"https://images.unsplash.com/photo-1530549387789-4c1017266635?w=1200&auto=format&fit=crop&q=85")
- )
- val chats=listOf(Chat("Алиса Brown","@alicia","Отправила тебе фото ✨","12:42",2),Chat("Graf Team","@graf_team","Новый дизайн уже готов","11:18",1),Chat("Максим","@max_dev","Давай обсудим идею","Вчера",0),Chat("Дизайн / идеи","@design_room","Артём: выглядит отлично!","Пн",0))
- var mode by remember { mutableStateOf("Grafs") }; var menu by remember { mutableStateOf(false) }
- var activePost by remember { mutableStateOf<Post?>(null) }; var comment by remember { mutableStateOf("") }
- var attachment by remember { mutableStateOf<Uri?>(null) }; var comments by remember { mutableStateOf(mapOf<String,List<String>>()) }
- var likes by remember { mutableStateOf(setOf<String>()) }; var activeChat by remember { mutableStateOf<Chat?>(null) }
- var draft by remember { mutableStateOf("") }; var messages by remember { mutableStateOf(mapOf<String,List<String>>()) }
- val listState= rememberLazyListState(); val context=LocalContext.current
- val picker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri -> if(uri!=null){ runCatching { context.contentResolver.takePersistableUriPermission(uri,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }; attachment=uri } }
- LaunchedEffect(listState,mode,activeChat) {
-  var oldIndex=0; var oldOffset=0
-  snapshotFlow { listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset }.collect { (index,offset) ->
-   if(index>oldIndex || (index==oldIndex && offset>oldOffset)) onScrollChrome(index==0 && offset<36)
-   if(index<oldIndex || (index==oldIndex && offset<oldOffset)) onScrollChrome(true)
-   oldIndex=index; oldOffset=offset
-  }
- }
- GlasmioTheme(isDark=dark) {
-  GlasmioBackdropHost(modifier=Modifier.fillMaxSize(),sampledContent={
-   Box(Modifier.fillMaxSize().background(Color(0xFF050608))) {
-    when {
-     activeChat!=null -> {
-      val chat=activeChat!!; val msgs=messages[chat.handle].orEmpty()
-      Column(Modifier.fillMaxSize()) {
-       LazyColumn(Modifier.weight(1f).fillMaxWidth(),contentPadding=PaddingValues(top=70.dp,start=16.dp,end=16.dp,bottom=16.dp),verticalArrangement=Arrangement.spacedBy(9.dp)) {
-        items(msgs) { msg -> Row(Modifier.fillMaxWidth(),horizontalArrangement=Arrangement.End) {
-         Box(Modifier.widthIn(max=290.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(18.dp,18.dp,5.dp,18.dp)).background(Color(0xFF183D62)).padding(12.dp)){ Text(msg,color=Color.White,fontSize=14.sp) }
-        } }
-        if(msgs.isEmpty()) item { Text("Начните общение — отправьте первое сообщение.",color=secondary,fontSize=13.sp,modifier=Modifier.fillMaxWidth().padding(top=45.dp),textAlign=TextAlign.Center) }
-       }
-       Row(Modifier.fillMaxWidth().padding(12.dp),verticalAlignment=Alignment.CenterVertically) {
-        Box(Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(22.dp)).background(Color(0xFF202329)).padding(13.dp)) {
-         if(draft.isEmpty()) Text("Сообщение…",color=secondary,fontSize=14.sp)
-         BasicTextField(value=draft,onValueChange={draft=it},textStyle=TextStyle(color=foreground,fontSize=14.sp),modifier=Modifier.fillMaxWidth())
-        }
-        Spacer(Modifier.width(8.dp))
-        GlasmioIconButton(onClick={ if(draft.isNotBlank()){ messages=messages+(chat.handle to (messages[chat.handle].orEmpty()+draft.trim()));draft="" } },size=44.dp){ GrafIcon(Icons.Rounded.Send,"Отправить",foreground,19.dp) }
-       }
-      }
-     }
-     mode=="Grafs" -> LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(start=16.dp,end=16.dp,top=66.dp,bottom=116.dp),verticalArrangement=Arrangement.spacedBy(12.dp)) {
-      items(posts) { post ->
-       val key=post.handle+post.time; val liked=key in likes; val postComments=comments[key].orEmpty()
-       Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(23.dp)).background(Color(0xFF17191D)).border(1.dp,Color.White.copy(alpha=.14f),androidx.compose.foundation.shape.RoundedCornerShape(23.dp)).padding(15.dp)) {
-        Row(verticalAlignment=Alignment.CenterVertically) {
-         Box(Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF30343B)),contentAlignment=Alignment.Center){ Text(post.name.take(1),color=foreground,fontWeight=FontWeight.Bold) }
-         Spacer(Modifier.width(10.dp)); Column(Modifier.weight(1f)){ Text(post.name,color=foreground,fontSize=14.sp,fontWeight=FontWeight.Bold);Text(post.handle,color=secondary,fontSize=11.sp) }
-         Text(post.time,color=secondary,fontSize=11.sp); GrafIcon(Icons.Rounded.MoreHoriz,"Ещё",secondary,20.dp)
-        }
-        Spacer(Modifier.height(12.dp)); Text(post.body,color=foreground,fontSize=14.sp,lineHeight=20.sp)
-        if(post.photo!=null){ Spacer(Modifier.height(12.dp));coil.compose.AsyncImage(model=post.photo,contentDescription="Фото публикации",contentScale=androidx.compose.ui.layout.ContentScale.Crop,modifier=Modifier.fillMaxWidth().height(205.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(17.dp))) }
-        Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth(),verticalAlignment=Alignment.CenterVertically) {
-         Row(Modifier.clickable { likes=if(liked) likes-key else likes+key },verticalAlignment=Alignment.CenterVertically){ GrafIcon(if(liked) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,"Нравится",if(liked) Color(0xFFFF5577) else secondary,20.dp);Spacer(Modifier.width(6.dp));Text((post.likes+if(liked)1 else 0).toString(),color=secondary,fontSize=12.sp) }
-         Spacer(Modifier.width(18.dp))
-         Row(Modifier.clickable { activePost=post;comment="";attachment=null },verticalAlignment=Alignment.CenterVertically){ GrafIcon(Icons.Rounded.ChatBubbleOutline,"Комментарии",secondary,19.dp);Spacer(Modifier.width(6.dp));Text((post.replies+postComments.size).toString(),color=secondary,fontSize=12.sp) }
-         Spacer(Modifier.weight(1f));GrafIcon(Icons.Rounded.Send,"Поделиться",secondary,19.dp)
-        }
-        if(postComments.isNotEmpty()){ Spacer(Modifier.height(7.dp));Text("Последний комментарий: ${postComments.last()}",color=secondary,fontSize=11.sp,maxLines=2,overflow=TextOverflow.Ellipsis) }
-       }
-      }
-     }
-     else -> LazyColumn(state=listState,modifier=Modifier.fillMaxSize(),contentPadding=PaddingValues(top=68.dp,bottom=100.dp)) {
-      items(chats) { chat ->
-       Row(Modifier.fillMaxWidth().clickable { activeChat=chat;draft="" }.padding(horizontal=18.dp,vertical=14.dp),verticalAlignment=Alignment.CenterVertically) {
-        Box(Modifier.size(52.dp).clip(CircleShape).background(Color(0xFF242A33)),contentAlignment=Alignment.Center){ Text(chat.name.take(1),color=foreground,fontSize=19.sp,fontWeight=FontWeight.Bold) }
-        Spacer(Modifier.width(12.dp));Column(Modifier.weight(1f)){Text(chat.name,color=foreground,fontSize=15.sp,fontWeight=FontWeight.SemiBold);Text(chat.preview,color=secondary,fontSize=12.sp,maxLines=1)}
-        Column(horizontalAlignment=Alignment.End){Text(chat.time,color=secondary,fontSize=10.sp);if(chat.unread>0) Text(chat.unread.toString(),color=Blue,fontSize=11.sp) }
-       }
-       Box(Modifier.fillMaxWidth().padding(start=82.dp).height(.5.dp).background(Color.White.copy(alpha=.09f)))
-      }
-     }
+private fun ChatsScreen(
+    dark: Boolean,
+    foreground: Color,
+    secondary: Color,
+    textScale: Float,
+    onTextScaleChange: (Float) -> Unit,
+    onScrollChrome: (Boolean) -> Unit,
+) {
+    data class Chat(val name: String, val handle: String, val preview: String, val time: String, val unread: Int, val online: Boolean)
+    val chats = listOf(
+        Chat("Алиса Brown", "@alicia", "Отправила тебе фото ✨", "12:42", 2, true),
+        Chat("Graf Team", "@graf_team", "Новый дизайн уже готов", "11:18", 1, true),
+        Chat("Максим", "@max_dev", "Давай обсудим идею", "Вчера", 0, false),
+        Chat("Дизайн / идеи", "@design_room", "Артём: выглядит отлично!", "Пн", 0, true),
+        Chat("Никита", "@nikita", "Увидимся вечером?", "Вс", 0, false)
+    )
+    val contacts = listOf(
+        Chat("Алиса Brown", "@alicia", "В сети", "", 0, true),
+        Chat("Graf Team", "@graf_team", "Команда Graf", "", 0, true),
+        Chat("Максим", "@max_dev", "Был недавно", "", 0, false),
+        Chat("Дизайн / идеи", "@design_room", "Групповой чат", "", 0, true),
+        Chat("Никита", "@nikita", "Был давно", "", 0, false),
+        Chat("Екатерина", "@kate", "В сети", "", 0, true)
+    )
+    var mode by remember { mutableStateOf("Chats") }
+    var menuExpanded by remember { mutableStateOf(false) }
+    var chatMenuExpanded by remember { mutableStateOf(false) }
+    var activeChat by remember { mutableStateOf<Chat?>(null) }
+    var draft by remember { mutableStateOf("") }
+    var replyingTo by remember { mutableStateOf<GrafDemoMessage?>(null) }
+    var selectedMessage by remember { mutableStateOf<GrafDemoMessage?>(null) }
+    var pendingPhoto by remember { mutableStateOf<Uri?>(null) }
+    var emojiPickerOpen by remember { mutableStateOf(false) }
+    var reactions by remember { mutableStateOf(mapOf<Long, String>()) }
+    var messagesByChat by remember {
+        mutableStateOf(
+            mapOf(
+                "@alicia" to listOf(
+                    GrafDemoMessage(1L, "Привет! Как тебе новый Graf? 💙", false, "12:38"),
+                    GrafDemoMessage(2L, "Очень нравится стеклянный интерфейс!", true, "12:40"),
+                    GrafDemoMessage(3L, "Отправила тебе фото ✨", false, "12:42")
+                ),
+                "@graf_team" to listOf(
+                    GrafDemoMessage(4L, "Собрали новый экран чатов.", false, "11:12"),
+                    GrafDemoMessage(5L, "Новый дизайн уже готов", false, "11:18")
+                ),
+                "@max_dev" to listOf(
+                    GrafDemoMessage(6L, "Давай обсудим идею", false, "Вчера")
+                ),
+                "@design_room" to listOf(
+                    GrafDemoMessage(7L, "Артём: выглядит отлично!", false, "Пн")
+                ),
+                "@nikita" to listOf(
+                    GrafDemoMessage(8L, "Увидимся вечером?", false, "Вс")
+                )
+            )
+        )
     }
-   }
-  },overlayContent={
-   Column(Modifier.fillMaxSize()) {
-    GlassSurface(modifier=Modifier.fillMaxWidth().padding(horizontal=12.dp).height(56.dp),shape=androidx.compose.foundation.shape.RoundedCornerShape(20.dp)) {
-     Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center) {
-      if(activeChat!=null) GlasmioIconButton(onClick={activeChat=null},size=36.dp,modifier=Modifier.align(Alignment.CenterStart).padding(start=8.dp)){ GrafIcon(Icons.Rounded.ArrowBack,"Назад",foreground,20.dp) }
-      GlasmioMenu(expanded=menu,onExpandedChange={menu=it},itemCount=2,centerHorizontally=true,forceBelowAnchor=true,menuWidth=224.dp,
-       anchor={open->Text("GRAF",color=foreground,fontFamily=FontFamily.Serif,fontWeight=FontWeight.Bold,fontSize=25.sp,letterSpacing=4.sp,modifier=Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)).clickable(onClick=open).padding(horizontal=18.dp,vertical=7.dp))}
-      ){ backdrop,close ->
-       GlasmioMenuItem(title="Grafs",subtitle="Лента публикаций",onClick={mode="Grafs";activeChat=null;menu=false;close()},systemName="square.grid.2x2",backdrop=backdrop,enabled=true)
-       GlasmioMenuItem(title="Chats",subtitle="Личные сообщения",onClick={mode="Chats";activeChat=null;menu=false;close()},systemName="bubble.left.and.bubble.right",backdrop=backdrop,enabled=true)
-      }
-     }
+    val chatListState = rememberLazyListState()
+    val messageListState = rememberLazyListState()
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val imagePicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(uri, android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION)
+            }
+            pendingPhoto = uri
+        }
     }
-    Spacer(Modifier.weight(1f))
-   }
-   if(activePost!=null) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha=.65f)),contentAlignment=Alignment.Center) {
-    GlassSurface(modifier=Modifier.fillMaxWidth().padding(horizontal=16.dp),shape=androidx.compose.foundation.shape.RoundedCornerShape(26.dp)) {
-     Column(Modifier.fillMaxWidth().padding(16.dp)) {
-      Row(verticalAlignment=Alignment.CenterVertically){Text("Комментарии",color=foreground,fontSize=19.sp,fontWeight=FontWeight.Bold,modifier=Modifier.weight(1f));GlasmioIconButton(onClick={activePost=null;attachment=null},size=36.dp){GrafIcon(Icons.Rounded.Close,"Закрыть",foreground,18.dp)}}
-      Spacer(Modifier.height(9.dp));Text(activePost!!.body,color=secondary,fontSize=13.sp,maxLines=2,overflow=TextOverflow.Ellipsis)
-      val key=activePost!!.handle+activePost!!.time;val list=comments[key].orEmpty()
-      Column(Modifier.heightIn(max=180.dp).verticalScroll(rememberScrollState()),verticalArrangement=Arrangement.spacedBy(7.dp)){
-       if(list.isEmpty()) Text("Пока нет комментариев. Будь первым!",color=secondary,fontSize=12.sp,modifier=Modifier.padding(vertical=12.dp))
-       list.forEach { msg -> Box(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(14.dp)).background(Color.White.copy(alpha=.07f)).padding(11.dp)){Text(msg,color=foreground,fontSize=13.sp)} }
-      }
-      if(attachment!=null){Spacer(Modifier.height(8.dp));coil.compose.AsyncImage(model=attachment,contentDescription="Фото",modifier=Modifier.size(68.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp)),contentScale=androidx.compose.ui.layout.ContentScale.Crop)}
-      Spacer(Modifier.height(9.dp))
-      Row(horizontalArrangement=Arrangement.spacedBy(5.dp)){listOf("❤️","😂","🔥","✨","👍","🥰").forEach{ e->Text(e,Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)).background(Color.White.copy(alpha=.07f)).clickable{comment+=e}.padding(7.dp),fontSize=17.sp)}}
-      Spacer(Modifier.height(9.dp))
-      Row(verticalAlignment=Alignment.CenterVertically){
-       GlasmioIconButton(onClick={picker.launch(arrayOf("image/*"))},size=38.dp){GrafIcon(Icons.Rounded.AddPhotoAlternate,"Добавить фото",secondary,19.dp)}
-       Spacer(Modifier.width(7.dp))
-       Box(Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(17.dp)).background(Color.White.copy(alpha=.08f)).padding(horizontal=11.dp,vertical=12.dp)){
-        if(comment.isEmpty())Text("Написать комментарий…",color=secondary,fontSize=12.sp)
-        BasicTextField(value=comment,onValueChange={comment=it},textStyle=TextStyle(color=foreground,fontSize=13.sp),modifier=Modifier.fillMaxWidth())
-       }
-       Spacer(Modifier.width(7.dp))
-       GlasmioIconButton(onClick={
-        val msg=buildString{append(comment.trim());if(attachment!=null){if(isNotEmpty())append(" ");append("📷 Фото")}}
-        if(msg.isNotBlank()){comments=comments+(key to (comments[key].orEmpty()+msg));comment="";attachment=null}
-       },size=40.dp){GrafIcon(Icons.Rounded.Send,"Отправить",foreground,18.dp)}
-      }
-     }
+    LaunchedEffect(activeChat) {
+        onScrollChrome(activeChat == null)
+        if (activeChat != null) {
+            kotlinx.coroutines.yield()
+            val count = messagesByChat[activeChat!!.handle].orEmpty().size
+            if (count > 0) messageListState.scrollToItem(count - 1)
+        }
     }
-   }
-  })
- }
+    LaunchedEffect(chatListState, mode, activeChat) {
+        var oldIndex = 0
+        var oldOffset = 0
+        snapshotFlow { chatListState.firstVisibleItemIndex to chatListState.firstVisibleItemScrollOffset }.collect { (index, offset) ->
+            if (activeChat == null && mode == "Chats") {
+                if (index > oldIndex || (index == oldIndex && offset > oldOffset)) onScrollChrome(index == 0 && offset < 36)
+                if (index < oldIndex || (index == oldIndex && offset < oldOffset)) onScrollChrome(true)
+            }
+            oldIndex = index
+            oldOffset = offset
+        }
+    }
+    LaunchedEffect(activeChat?.handle, messagesByChat[activeChat?.handle]?.size) {
+        val count = activeChat?.let { messagesByChat[it.handle].orEmpty().size } ?: 0
+        if (count > 0) messageListState.animateScrollToItem(count - 1)
+    }
+    fun clockNow(): String = android.text.format.DateFormat.format("HH:mm", System.currentTimeMillis()).toString()
+    fun sendMessage(chat: Chat) {
+        val body = draft.trim()
+        val photo = pendingPhoto?.toString()
+        if (body.isEmpty() && photo == null) return
+        val sent = GrafDemoMessage(
+            id = System.currentTimeMillis(),
+            text = body,
+            outgoing = true,
+            time = clockNow(),
+            replyTo = replyingTo?.text,
+            photoUri = photo
+        )
+        messagesByChat = messagesByChat + (chat.handle to (messagesByChat[chat.handle].orEmpty() + sent))
+        draft = ""
+        replyingTo = null
+        pendingPhoto = null
+        emojiPickerOpen = false
+        scope.launch {
+            kotlinx.coroutines.delay(900)
+            val answer = when (chat.handle) {
+                "@alicia" -> listOf("Ахах, да! 😊", "Супер, мне нравится!", "Сейчас посмотрю 💙").random()
+                "@graf_team" -> listOf("Принято! Уже проверяем.", "Отлично, спасибо!", "Скоро будет обновление 🚀").random()
+                "@max_dev" -> listOf("Давай, я на связи.", "Хорошая идея!", "Согласен 👍").random()
+                "@design_room" -> listOf("Спасибо за фидбек ✨", "Классная мысль!", "Обсудим чуть позже.").random()
+                else -> listOf("Хорошо 😊", "Договорились!", "Сейчас отвечу подробнее.").random()
+            }
+            val incoming = GrafDemoMessage(System.currentTimeMillis(), answer, false, clockNow())
+            messagesByChat = messagesByChat + (chat.handle to (messagesByChat[chat.handle].orEmpty() + incoming))
+        }
+    }
+
+    GlasmioTheme(isDark = dark) {
+        GlasmioBackdropHost(
+            modifier = Modifier.fillMaxSize(),
+            sampledContent = {
+                Box(Modifier.fillMaxSize()) {
+                    if (activeChat != null) {
+                        // Telegram Android's MotionBackgroundDrawable default four-colour palette.
+                        // Telegram renders these generated gradient wallpapers rather than relying on a fixed bitmap.
+                        Box(
+                            Modifier.fillMaxSize().background(
+                                Brush.linearGradient(
+                                    listOf(
+                                        Color(0xFF426D57),
+                                        Color(0xFFF7E48B),
+                                        Color(0xFF87A284),
+                                        Color(0xFFFDF6CA)
+                                    )
+                                )
+                            )
+                        )
+                        Box(Modifier.fillMaxSize().background(Color(0xFF071018).copy(alpha = .82f)))
+                        val chat = activeChat!!
+                        val messages = messagesByChat[chat.handle].orEmpty()
+                        LazyColumn(
+                            state = messageListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 13.dp, end = 13.dp, top = 82.dp, bottom = 126.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(messages, key = { it.id }) { message ->
+                                val isMine = message.outgoing
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
+                                    verticalAlignment = Alignment.Bottom
+                                ) {
+                                    Box(Modifier.widthIn(max = 318.dp)) {
+                                        Column(
+                                            Modifier
+                                                .clip(
+                                                    if (isMine) androidx.compose.foundation.shape.RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp)
+                                                    else androidx.compose.foundation.shape.RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp)
+                                                )
+                                                .background(if (isMine) Color(0xFF234F69).copy(alpha = .94f) else Color(0xFF202A35).copy(alpha = .96f))
+                                                .border(1.dp, Color.White.copy(alpha = .12f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                                                .combinedClickable(
+                                                    onClick = {},
+                                                    onLongClick = { selectedMessage = message }
+                                                )
+                                                .padding(horizontal = 12.dp, vertical = 9.dp)
+                                        ) {
+                                            if (message.replyTo != null) {
+                                                Column(
+                                                    Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                                                        .background(Color.White.copy(alpha = .10f))
+                                                        .padding(start = 8.dp, top = 5.dp, bottom = 5.dp, end = 7.dp)
+                                                ) {
+                                                    Text("Ответ", color = Color(0xFF9EDBFF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                                    Text(message.replyTo, color = Color.White.copy(alpha = .78f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                }
+                                            }
+                                            if (message.photoUri != null) {
+                                                coil.compose.AsyncImage(
+                                                    model = Uri.parse(message.photoUri),
+                                                    contentDescription = "Фото в сообщении",
+                                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxWidth().heightIn(max = 210.dp).widthIn(min = 160.dp)
+                                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(13.dp))
+                                                )
+                                            }
+                                            if (message.text.isNotEmpty()) {
+                                                Text(
+                                                    message.text,
+                                                    color = Color.White,
+                                                    fontSize = 14.sp,
+                                                    lineHeight = 19.sp
+                                                )
+                                            }
+                                            Row(
+                                                Modifier.align(Alignment.End).padding(top = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(message.time, color = Color.White.copy(alpha = .62f), fontSize = 10.sp)
+                                                if (isMine) {
+                                                    Spacer(Modifier.width(4.dp))
+                                                    Text("✓✓", color = Color(0xFF9EDBFF), fontSize = 10.sp)
+                                                }
+                                            }
+                                            val reaction = reactions[message.id]
+                                            if (reaction != null) {
+                                                Text(reaction, fontSize = 13.sp, modifier = Modifier.padding(top = 3.dp))
+                                            }
+                                        }
+                                        GlasmioContextMenu(
+                                            visible = selectedMessage?.id == message.id,
+                                            itemCount = 4,
+                                            menuWidth = 236.dp,
+                                            opensAbove = true
+                                        ) { menuBackdrop ->
+                                            GlasmioMenuItem(
+                                                title = "Ответить",
+                                                systemName = "arrowshape.turn.up.left",
+                                                backdrop = menuBackdrop,
+                                                onClick = { replyingTo = message; selectedMessage = null }
+                                            )
+                                            GlasmioMenuItem(
+                                                title = "Копировать",
+                                                systemName = "doc.on.doc",
+                                                backdrop = menuBackdrop,
+                                                onClick = {
+                                                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Graf", message.text))
+                                                    selectedMessage = null
+                                                }
+                                            )
+                                            GlasmioMenuItem(
+                                                title = "Поставить ❤️",
+                                                systemName = "heart",
+                                                backdrop = menuBackdrop,
+                                                onClick = { reactions = reactions + (message.id to "❤️"); selectedMessage = null }
+                                            )
+                                            GlasmioMenuItem(
+                                                title = "Удалить у меня",
+                                                systemName = "trash",
+                                                destructive = true,
+                                                backdrop = menuBackdrop,
+                                                onClick = {
+                                                    messagesByChat = messagesByChat + (chat.handle to messagesByChat[chat.handle].orEmpty().filterNot { it.id == message.id })
+                                                    selectedMessage = null
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        Box(Modifier.fillMaxSize().background(Color(0xFF050608)))
+                        if (mode == "Chats") {
+                            LazyColumn(
+                                state = chatListState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(top = 68.dp, bottom = 104.dp),
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                items(chats, key = { it.handle }) { chat ->
+                                    val last = messagesByChat[chat.handle].orEmpty().lastOrNull()
+                                    Row(
+                                        Modifier.fillMaxWidth().clickable {
+                                            activeChat = chat
+                                            draft = ""
+                                            replyingTo = null
+                                            pendingPhoto = null
+                                        }.padding(horizontal = 17.dp, vertical = 13.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            Modifier.size(56.dp).clip(CircleShape)
+                                                .background(Brush.linearGradient(listOf(Color(0xFF305C77), Color(0xFF263746)))),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(chat.name.take(1).uppercase(), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                            if (chat.online) Box(
+                                                Modifier.align(Alignment.BottomEnd).padding(2.dp).size(12.dp).clip(CircleShape)
+                                                    .background(Color(0xFF4DD58A)).border(2.dp, Color(0xFF080B10), CircleShape)
+                                            )
+                                        }
+                                        Spacer(Modifier.width(13.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Text(chat.name, color = foreground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                            Text(last?.text?.ifBlank { "Фото" } ?: chat.preview, color = secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                                        }
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(last?.time ?: chat.time, color = secondary, fontSize = 10.sp)
+                                            if (chat.unread > 0) Box(
+                                                Modifier.padding(top = 6.dp).clip(CircleShape).background(Blue).padding(horizontal = 7.dp, vertical = 3.dp)
+                                            ) { Text(chat.unread.toString(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                                        }
+                                    }
+                                    Box(Modifier.fillMaxWidth().padding(start = 86.dp).height(.6.dp).background(Color.White.copy(alpha = .08f)))
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                state = chatListState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(top = 68.dp, bottom = 104.dp)
+                            ) {
+                                items(contacts, key = { it.handle }) { contact ->
+                                    Row(
+                                        Modifier.fillMaxWidth().clickable {
+                                            activeChat = contact
+                                            mode = "Chats"
+                                            draft = ""
+                                        }.padding(horizontal = 18.dp, vertical = 13.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(Modifier.size(50.dp).clip(CircleShape).background(Color(0xFF283642)), contentAlignment = Alignment.Center) {
+                                            Text(contact.name.take(1), color = foreground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        Spacer(Modifier.width(12.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Text(contact.name, color = foreground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
+                                            Text(contact.preview, color = secondary, fontSize = 12.sp)
+                                        }
+                                        Text("Написать", color = Color(0xFF8CCBFF), fontSize = 12.sp)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            overlayContent = {
+                if (activeChat == null) {
+                    Column(Modifier.fillMaxSize()) {
+                        GlassSurface(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).height(56.dp),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
+                        ) {
+                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                                GlasmioMenu(
+                                    expanded = menuExpanded,
+                                    onExpandedChange = { menuExpanded = it },
+                                    itemCount = 2,
+                                    centerHorizontally = true,
+                                    forceBelowAnchor = true,
+                                    menuWidth = 224.dp,
+                                    anchor = { open ->
+                                        Text(
+                                            "GRAF",
+                                            color = foreground,
+                                            fontFamily = FontFamily.Serif,
+                                            fontWeight = FontWeight.Bold,
+                                            fontSize = 25.sp,
+                                            letterSpacing = 4.sp,
+                                            modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                                                .clickable(onClick = open).padding(horizontal = 18.dp, vertical = 7.dp)
+                                        )
+                                    }
+                                ) { menuBackdrop, close ->
+                                    GlasmioMenuItem(
+                                        title = "Chats",
+                                        subtitle = "Личные сообщения",
+                                        onClick = { mode = "Chats"; menuExpanded = false; close() },
+                                        systemName = "bubble.left.and.bubble.right",
+                                        backdrop = menuBackdrop,
+                                        enabled = true
+                                    )
+                                    GlasmioMenuItem(
+                                        title = "Contacts",
+                                        subtitle = "Найти собеседника",
+                                        onClick = { mode = "Contacts"; menuExpanded = false; close() },
+                                        systemName = "person.2",
+                                        backdrop = menuBackdrop,
+                                        enabled = true
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.weight(1f))
+                    }
+                } else {
+                    val chat = activeChat!!
+                    Column(Modifier.fillMaxSize()) {
+                        GlassSurface(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp).height(66.dp),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(22.dp)
+                        ) {
+                            Row(Modifier.fillMaxSize().padding(horizontal = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                                GlasmioIconButton(onClick = {
+                                    activeChat = null
+                                    selectedMessage = null
+                                    replyingTo = null
+                                    pendingPhoto = null
+                                }, size = 42.dp) { GrafIcon(Icons.Rounded.ArrowBack, "Назад", foreground, 21.dp) }
+                                Box(Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF2D5268)), contentAlignment = Alignment.Center) {
+                                    Text(chat.name.take(1), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                    if (chat.online) Box(Modifier.align(Alignment.BottomEnd).size(10.dp).clip(CircleShape).background(Color(0xFF4DD58A)).border(1.5.dp, Color(0xFF17232D), CircleShape))
+                                }
+                                Spacer(Modifier.width(10.dp))
+                                Column(Modifier.weight(1f)) {
+                                    Text(chat.name, color = foreground, fontSize = 15.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                                    Text(if (chat.online) "в сети" else "был(а) недавно", color = if (chat.online) Color(0xFF65D69B) else secondary, fontSize = 11.sp)
+                                }
+                                GlasmioIconButton(onClick = {}, size = 40.dp) { GrafIcon(Icons.Rounded.Call, "Позвонить", foreground, 19.dp) }
+                                GlasmioMenu(
+                                    expanded = chatMenuExpanded,
+                                    onExpandedChange = { chatMenuExpanded = it },
+                                    itemCount = 3,
+                                    menuWidth = 230.dp,
+                                    anchor = { open ->
+                                        GlasmioIconButton(onClick = open, size = 40.dp) { GrafIcon(Icons.Rounded.MoreHoriz, "Ещё", foreground, 21.dp) }
+                                    }
+                                ) { menuBackdrop, close ->
+                                    GlasmioMenuItem(title = "Увеличить текст", systemName = "plus.magnifyingglass", backdrop = menuBackdrop, onClick = { onTextScaleChange((textScale + .05f).coerceAtMost(1.35f)); close() })
+                                    GlasmioMenuItem(title = "Уменьшить текст", systemName = "minus.magnifyingglass", backdrop = menuBackdrop, onClick = { onTextScaleChange((textScale - .05f).coerceAtLeast(.8f)); close() })
+                                    GlasmioMenuItem(title = "Обычный размер", systemName = "textformat.size", backdrop = menuBackdrop, onClick = { onTextScaleChange(1f); close() })
+                                }
+                            }
+                        }
+                        Spacer(Modifier.weight(1f))
+                        GlassSurface(
+                            modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp).imePadding(),
+                            shape = androidx.compose.foundation.shape.RoundedCornerShape(25.dp)
+                        ) {
+                            Column(Modifier.fillMaxWidth().padding(horizontal = 9.dp, vertical = 8.dp)) {
+                                if (replyingTo != null) {
+                                    Row(Modifier.fillMaxWidth().padding(start = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        Column(Modifier.weight(1f)) {
+                                            Text("Ответ для сообщения", color = Color(0xFF8CCBFF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
+                                            Text(replyingTo!!.text.ifBlank { "Фото" }, color = secondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        }
+                                        GlasmioIconButton(onClick = { replyingTo = null }, size = 30.dp) { GrafIcon(Icons.Rounded.Close, "Отменить ответ", secondary, 16.dp) }
+                                    }
+                                }
+                                if (pendingPhoto != null) {
+                                    Row(Modifier.fillMaxWidth().padding(start = 7.dp, bottom = 7.dp), verticalAlignment = Alignment.CenterVertically) {
+                                        coil.compose.AsyncImage(model = pendingPhoto, contentDescription = "Выбранное фото", contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.size(54.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(10.dp)))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Фото готово к отправке", color = secondary, fontSize = 11.sp, modifier = Modifier.weight(1f))
+                                        GlasmioIconButton(onClick = { pendingPhoto = null }, size = 30.dp) { GrafIcon(Icons.Rounded.Close, "Убрать фото", secondary, 16.dp) }
+                                    }
+                                }
+                                if (emojiPickerOpen) {
+                                    Row(Modifier.fillMaxWidth().padding(bottom = 7.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
+                                        listOf("😀", "😂", "🥰", "❤️", "🔥", "👍", "✨", "🙏").forEach { emoji ->
+                                            Text(emoji, modifier = Modifier.clickable { draft += emoji }.padding(5.dp), fontSize = 20.sp)
+                                        }
+                                    }
+                                }
+                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                    GlasmioIconButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, size = 42.dp) {
+                                        GrafIcon(Icons.Rounded.AddPhotoAlternate, "Прикрепить файл", foreground, 21.dp)
+                                    }
+                                    Spacer(Modifier.width(5.dp))
+                                    GlasmioIconButton(onClick = { emojiPickerOpen = !emojiPickerOpen }, size = 38.dp) {
+                                        Text("☺", color = foreground, fontSize = 22.sp)
+                                    }
+                                    Spacer(Modifier.width(4.dp))
+                                    Box(
+                                        Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
+                                            .background(Color.White.copy(alpha = .085f)).padding(horizontal = 13.dp, vertical = 11.dp)
+                                    ) {
+                                        if (draft.isEmpty()) Text("Сообщение", color = secondary, fontSize = 14.sp)
+                                        BasicTextField(
+                                            value = draft,
+                                            onValueChange = { draft = it },
+                                            modifier = Modifier.fillMaxWidth().heightIn(min = 22.dp, max = 108.dp),
+                                            textStyle = TextStyle(
+                                                color = foreground,
+                                                fontSize = 14.sp,
+                                                fontFamily = LocalTextStyle.current.fontFamily,
+                                                fontWeight = LocalTextStyle.current.fontWeight,
+                                                lineHeight = 19.sp
+                                            ),
+                                            maxLines = 5,
+                                            cursorBrush = SolidColor(Color(0xFF8CCBFF))
+                                        )
+                                    }
+                                    Spacer(Modifier.width(7.dp))
+                                    GlasmioIconButton(
+                                        onClick = { sendMessage(chat) },
+                                        size = 44.dp,
+                                        modifier = Modifier.background(Blue, CircleShape)
+                                    ) { GrafIcon(Icons.Rounded.Send, "Отправить", Color.White, 19.dp) }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        )
+    }
 }
+
 
 @Composable
 private fun ContactsScreen(dark:Boolean,foreground:Color,secondary:Color) {
