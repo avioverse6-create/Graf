@@ -796,47 +796,46 @@ private fun ProfileScreen(
 
                     Spacer(Modifier.height(7.dp))
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(
-                            Modifier.weight(1.45f).height(40.dp).clip(CircleShape)
-                                .background(glassTone)
-                                .border(1.dp, Color.White.copy(alpha = if (dark) .20f else .55f), CircleShape)
-                                .clickable {
-                                    if (trackUri == null) audioPicker.launch(arrayOf("audio/*"))
-                                    else runCatching {
-                                        if (player.isPlaying) { player.pause(); trackPlaying = false }
-                                        else { player.start(); trackPlaying = true }
-                                    }
-                                },
-                            contentAlignment = Alignment.CenterStart
+                        GlassSurface(
+                            modifier = Modifier.weight(1.45f).height(42.dp),
+                            shape = CircleShape,
+                            onClick = {
+                                if (trackUri == null) audioPicker.launch(arrayOf("audio/*"))
+                                else runCatching {
+                                    if (player.isPlaying) { player.pause(); trackPlaying = false }
+                                    else { player.start(); trackPlaying = true }
+                                }
+                            },
+                            contentAlignment = Alignment.CenterStart,
                         ) {
-                            Canvas(Modifier.fillMaxSize()) {
-                                if (trackProgress > 0f) {
-                                    drawRoundRect(
-                                        color = Color.White.copy(alpha = .19f),
-                                        topLeft = Offset.Zero,
-                                        size = androidx.compose.ui.geometry.Size(size.width * trackProgress, size.height),
-                                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2f, size.height / 2f)
-                                    )
+                            Box(Modifier.fillMaxSize().clip(CircleShape)) {
+                                Canvas(Modifier.fillMaxSize()) {
+                                    if (trackProgress > 0f) {
+                                        drawRoundRect(
+                                            color = Color.White.copy(alpha = .20f),
+                                            topLeft = Offset.Zero,
+                                            size = androidx.compose.ui.geometry.Size(size.width * trackProgress, size.height),
+                                            cornerRadius = androidx.compose.ui.geometry.CornerRadius(size.height / 2f, size.height / 2f)
+                                        )
+                                    }
+                                }
+                                Row(Modifier.fillMaxSize().padding(horizontal = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Icon(Icons.Rounded.MusicNote, null, tint = text, modifier = Modifier.size(16.dp))
+                                    Spacer(Modifier.width(7.dp))
+                                    Text(trackTitle, color = text, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                 }
                             }
-                            Row(Modifier.fillMaxWidth().padding(horizontal = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Icon(Icons.Rounded.MusicNote, null, tint = text, modifier = Modifier.size(15.dp))
-                                Spacer(Modifier.width(6.dp))
-                                Text(trackTitle, color = text, fontSize = 10.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                            }
                         }
-                        Box(
-                            Modifier.weight(1f).height(40.dp).clip(CircleShape)
-                                .background(glassTone)
-                                .border(1.dp, Color.White.copy(alpha = if (dark) .20f else .55f), CircleShape)
-                                .clickable { },
-                            contentAlignment = Alignment.Center
+                        GlassSurface(
+                            modifier = Modifier.weight(1f).height(42.dp),
+                            shape = CircleShape,
+                            onClick = { },
                         ) {
-                            Row(Modifier.padding(horizontal = 9.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Text("Баланс", color = mutedText, fontSize = 10.sp)
+                            Row(Modifier.fillMaxSize().padding(horizontal = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.Center) {
+                                Text("Баланс", color = mutedText, fontSize = 11.sp)
                                 Spacer(Modifier.width(5.dp))
-                                Text("◆ 0.29", color = text, fontSize = 11.sp, fontWeight = FontWeight.SemiBold)
-                                Icon(Icons.Rounded.ArrowBack, null, tint = mutedText, modifier = Modifier.size(13.dp).graphicsLayer { rotationZ = 180f })
+                                Text("◆ 0.29", color = text, fontSize = 12.sp, fontWeight = FontWeight.SemiBold)
+                                Icon(Icons.Rounded.ArrowBack, null, tint = mutedText, modifier = Modifier.size(14.dp).graphicsLayer { rotationZ = 180f })
                             }
                         }
                     }
@@ -849,9 +848,9 @@ private fun ProfileScreen(
                         ProfileGlasmioAction(if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications, "Беззвучно", text, mutedText, { muted = !muted })
                     }
                     Spacer(Modifier.height(16.dp))
-                    Box(
-                        Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(25.dp))
-                            .background(glassTone).border(1.dp, Color.White.copy(alpha=if (dark) .12f else .28f), androidx.compose.foundation.shape.RoundedCornerShape(25.dp)),
+                    GlassSurface(
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = androidx.compose.foundation.shape.RoundedCornerShape(25.dp),
                     ) {
                         Column(Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 18.dp)) {
                             ProfileDataRow("Номер", profilePhone, text, mutedText)
@@ -872,7 +871,6 @@ private fun ProfileScreen(
                             }
                         }
                     }
-
                     Spacer(Modifier.height(13.dp))
                     Spacer(Modifier.height(15.dp))
                     Text("Истории", color = text, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
