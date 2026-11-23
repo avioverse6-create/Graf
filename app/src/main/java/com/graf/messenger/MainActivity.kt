@@ -590,6 +590,13 @@ private fun ChatsScreen(
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(messages, key = { it.id }) { message ->
+                                AnimatedVisibility(
+                                    visible = true,
+                                    enter = fadeIn(tween(180)) + androidx.compose.animation.slideInVertically(
+                                        initialOffsetY = { it / 3 },
+                                        animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f)
+                                    )
+                                ) {
                                 val isMine = message.outgoing
                                 Row(
                                     Modifier.fillMaxWidth(),
@@ -694,6 +701,7 @@ private fun ChatsScreen(
                                             )
                                         }
                                     }
+                                }
                                 }
                             }
                         }
