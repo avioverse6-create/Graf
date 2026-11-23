@@ -169,7 +169,7 @@ private val GrafSettingsCogIcon: ImageVector by lazy {
 }
 
 private enum class GrafTab(val title: String, val icon: ImageVector) {
-    Home("Home", Icons.Rounded.Home),
+    Home("Posts", Icons.Rounded.Home),
     Contact("Contacts", Icons.Rounded.Contacts),
     Search("Search", Icons.Rounded.Search),
     Settings("Settings", Icons.Rounded.Settings)
@@ -247,7 +247,7 @@ private fun GrafApp() {
         onFontPick={fontPicker.launch(arrayOf("font/ttf","application/x-font-ttf","application/octet-stream"))},
         onFontReset={customFontPath=null;prefs.edit().remove("font_path").apply()},hasCustomFont=customFontPath!=null)
        else -> when(GrafTab.entries[state.second]) {
-        GrafTab.Home -> ChatsScreen(dark,foreground,secondary,query,{query=it},backdrop)
+        GrafTab.Home -> PostsScreen(dark,foreground,secondary,query,{query=it})
         GrafTab.Contact -> ContactsScreen(dark,foreground,secondary)
         GrafTab.Search -> SearchScreen(query,{query=it},dark,foreground,secondary) { channelOpen=false }
         GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,
@@ -370,74 +370,51 @@ private val GrafEditIcon: ImageVector by lazy {
 }
 
 @Composable
-private fun ChatsScreen(
+private fun PostsScreen(
     dark: Boolean,
     foreground: Color,
     secondary: Color,
     query: String,
     onQuery: (String) -> Unit,
-    backdrop: com.styropyr0.prismal.PrismalBackdrop
 ) {
-    val channels = listOf(
-        "РИА Новости" to "Средний возраст, в котором женщины рожают первого ребёнка...",
-        "НГС — новости Новосибирска" to "Какие малыши ищут дом. Двум котятам-подросткам...",
-        "АСТ-54 Black" to "Спасатели вытащили женщину из глубокого сугроба...",
-        "Анатолий Шарий" to "NBC News: два представителя Белого дома сообщили...",
-        "True Питер" to "Средствами РЭБ подавлен БПЛА в Волховском районе...",
-        "9to5Mac" to "Google updates Snapseed for iPhone with retro film camera",
-        "Rozetked" to "Самая большая революция LEGO за 50 лет...",
-        "Graf News" to "Новости и обновления Graf",
-        "Технологии" to "Новые устройства и разработки",
-        "Спорт сегодня" to "Главные спортивные события",
-        "Музыка дня" to "Новые релизы и подборки",
-        "Кинообзор" to "Премьеры этой недели",
-        "Путешествия" to "Идеи для новых поездок",
-        "Наука" to "Открытия и исследования",
-        "Город" to "Что происходит рядом"
+    data class FeedPost(val name: String, val handle: String, val time: String, val body: String, val likes: String, val replies: String)
+    val posts = listOf(
+        FeedPost("Graf", "@graf_app", "2 мин", "Добро пожаловать в Graf — место для коротких мыслей, новостей и общения.", "128", "24"),
+        FeedPost("Алиса", "@alicia", "18 мин", "Иногда лучший план на день — просто начать с маленького шага.", "42", "8"),
+        FeedPost("Технологии", "@tech_daily", "34 мин", "Новые идеи становятся реальностью, когда над ними работают каждый день.", "76", "13"),
+        FeedPost("Музыка дня", "@music_now", "1 ч", "Какой трек у вас сегодня на повторе? Делитесь находками 🎧", "31", "19"),
+        FeedPost("Путешествия", "@go_explore", "2 ч", "Небольшая прогулка по незнакомому городу иногда запоминается сильнее большого путешествия.", "93", "6"),
+        FeedPost("Дизайн", "@pixel_notes", "3 ч", "Хороший интерфейс не мешает — он помогает сосредоточиться на главном.", "58", "11"),
+        FeedPost("Кино", "@frame_by_frame", "4 ч", "Вечер для хорошего фильма и полного погружения в историю 🍿", "27", "4"),
+        FeedPost("Наука", "@curious_mind", "5 ч", "Любопытство — отличный повод задать ещё один вопрос.", "64", "9"),
+        FeedPost("Спорт", "@daily_motion", "6 ч", "Главное — не идеальный результат, а регулярность и удовольствие от процесса.", "49", "7"),
+        FeedPost("Graf", "@graf_app", "Вчера", "Это ваша лента публикаций. Листайте, читайте и присоединяйтесь к обсуждению.", "112", "17")
     )
-    val editTint = if (dark) Color(0xFF007AFF) else Color(0xFF007AFF)
-    val neutralTint = if (dark) Color.White.copy(alpha = .10f) else Color.White.copy(alpha = .36f)
-    val outline = if (dark) Color.White.copy(alpha = .20f) else Color.Black.copy(alpha = .10f)
-
+    val filtered = posts.filter { query.isBlank() || it.name.contains(query, true) || it.handle.contains(query, true) || it.body.contains(query, true) }
     Column(Modifier.fillMaxSize()) {
         Row(
-            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 10.dp),
+            Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            Box(
-                Modifier.size(46.dp).clip(CircleShape).background(editTint)
-                    .border(1.dp, Color.White.copy(alpha = .55f), CircleShape).clickable { },
-                contentAlignment = Alignment.Center
-            ) {
-                GrafIcon(GrafEditIcon, "Редактировать", Color.White, 21.dp)
-            }
-            Spacer(Modifier.width(10.dp))
-            Box(
-                Modifier.size(46.dp).clip(CircleShape).background(neutralTint)
-                    .border(1.dp, outline, CircleShape).clickable { },
-                contentAlignment = Alignment.Center
-            ) {
-                GrafIcon(Icons.Rounded.Add, "Добавить", foreground, 25.dp)
-            }
+            Text("Публикации", color = foreground, fontSize = 23.sp, fontWeight = FontWeight.W900)
             Spacer(Modifier.weight(1f))
-            Text("Чаты", color = foreground, fontSize = 22.sp, fontWeight = FontWeight.W900)
+            Text("10 постов", color = secondary, fontSize = 12.sp)
         }
-
-        GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 9.dp)) {
+        GlassPanel(dark, Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 6.dp)) {
             Row(
-                Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 14.dp),
+                Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 13.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                GrafIcon(Icons.Rounded.Search, "Поиск", secondary, 21.dp)
+                GrafIcon(Icons.Rounded.Search, "Поиск", secondary, 20.dp)
                 Spacer(Modifier.width(10.dp))
                 BasicTextField(
                     value = query,
                     onValueChange = onQuery,
                     singleLine = true,
-                    textStyle = TextStyle(color = foreground, fontSize = 16.sp),
+                    textStyle = TextStyle(color = foreground, fontSize = 15.sp),
                     decorationBox = { inner ->
                         Box {
-                            if (query.isEmpty()) Text("Поиск", color = secondary, fontSize = 16.sp)
+                            if (query.isEmpty()) Text("Поиск публикаций", color = secondary, fontSize = 15.sp)
                             inner()
                         }
                     },
@@ -445,39 +422,44 @@ private fun ChatsScreen(
                 )
             }
         }
-
         LazyColumn(
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 100.dp)
+            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 110.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
-            items(channels.filter { item ->
-                query.isBlank() || item.first.contains(query, true) || item.second.contains(query, true)
-            }) { item ->
-                Row(
-                    Modifier.fillMaxWidth().clickable { }.padding(horizontal = 17.dp, vertical = 10.dp),
-                    verticalAlignment = Alignment.CenterVertically
+            items(filtered) { post ->
+                Column(
+                    Modifier.fillMaxWidth()
+                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
+                        .background(if (dark) Color(0xFF25272B) else Color(0xFFF3F4F7))
+                        .border(1.dp, if (dark) Color.White.copy(alpha = .12f) else Color.Black.copy(alpha = .08f), androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
+                        .padding(horizontal = 16.dp, vertical = 14.dp)
                 ) {
-                    Box(
-                        Modifier.size(62.dp).clip(CircleShape)
-                            .background(Brush.linearGradient(listOf(Color(0xFF143E79), Color(0xFF4B91B8)))),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(item.first.take(1), color = Color.White, fontSize = 22.sp, fontWeight = FontWeight.Bold)
-                    }
-                    Spacer(Modifier.width(13.dp))
-                    Column(Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text(item.first, color = foreground, fontSize = 16.sp, fontWeight = FontWeight.W900,
-                                maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
-                            Text("10:33", color = secondary, fontSize = 11.sp)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Box(Modifier.size(38.dp).clip(CircleShape).background(if (dark) Color(0xFF363B42) else Color(0xFFE1E4E8)), contentAlignment = Alignment.Center) {
+                            Text(post.name.take(1).uppercase(), color = foreground, fontSize = 16.sp, fontWeight = FontWeight.Bold)
                         }
-                        Spacer(Modifier.height(4.dp))
-                        Text(item.second, color = secondary, fontSize = 13.sp, maxLines = 2,
-                            overflow = TextOverflow.Ellipsis, lineHeight = 17.sp)
+                        Spacer(Modifier.width(10.dp))
+                        Column(Modifier.weight(1f)) {
+                            Text(post.name, color = foreground, fontSize = 14.sp, fontWeight = FontWeight.Bold, maxLines = 1)
+                            Text(post.handle, color = secondary, fontSize = 11.sp, maxLines = 1)
+                        }
+                        Text(post.time, color = secondary, fontSize = 11.sp)
+                    }
+                    Spacer(Modifier.height(12.dp))
+                    Text(post.body, color = foreground, fontSize = 14.sp, lineHeight = 20.sp)
+                    Spacer(Modifier.height(14.dp))
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                        Text("♡  " + post.likes, color = secondary, fontSize = 12.sp)
+                        Spacer(Modifier.width(24.dp))
+                        Text("◯  " + post.replies, color = secondary, fontSize = 12.sp)
+                        Spacer(Modifier.weight(1f))
+                        Text("↗", color = secondary, fontSize = 17.sp)
                     }
                 }
-                Box(Modifier.fillMaxWidth().padding(start = 92.dp).height(.5.dp)
-                    .background(if (dark) Color.White.copy(alpha = .08f) else Color.Black.copy(alpha = .08f)))
+            }
+            if (filtered.isEmpty()) item {
+                Text("Публикаций не найдено", color = secondary, fontSize = 13.sp, modifier = Modifier.fillMaxWidth().padding(28.dp), textAlign = TextAlign.Center)
             }
         }
     }
@@ -730,8 +712,8 @@ private fun ProfileScreen(
         }
     }
     // One shared surface tone for every profile component, independent of profile background theme.
-    val glassTone = Color(0xFF363B42)
-    val page = Color(0xFF292E32)
+    val glassTone = Color(0xFF25272B)
+    val page = Color.Black
     val text = if (dark) Color(0xFFF5F7F8) else Color(0xFF202529)
     val mutedText = if (dark) Color(0xFFE0E3E5) else Color(0xFF50575C)
 
