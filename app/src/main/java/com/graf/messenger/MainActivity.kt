@@ -408,16 +408,20 @@ private fun PostsScreen(
     val filtered = posts.filter { query.isBlank() || it.name.contains(query, true) || it.handle.contains(query, true) || it.body.contains(query, true) }
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.fillMaxWidth().height(54.dp), contentAlignment = Alignment.Center) {
-            GlasmioMenu(expanded = menuExpanded, onExpandedChange = { menuExpanded = it }, itemCount = 2,
-                anchor = { open ->
-                    Text("GRAF", color = foreground, fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold,
-                        fontSize = 25.sp, letterSpacing = 4.sp,
-                        modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                            .clickable(onClick = open).padding(horizontal = 18.dp, vertical = 7.dp))
-                }
-            ) { menuBackdrop, close ->
-                GlasmioMenuItem(title = "Grafs", onClick = { feedMode = "Grafs"; close() }, systemName = "square.grid.2x2", backdrop = menuBackdrop, enabled = true)
-                GlasmioMenuItem(title = "Chats", onClick = { feedMode = "Chats"; close() }, systemName = "bubble.left.and.bubble.right", backdrop = menuBackdrop, enabled = true)
+            Text("GRAF", color = foreground, fontFamily = FontFamily.Serif, fontWeight = FontWeight.Bold,
+                fontSize = 25.sp, letterSpacing = 4.sp,
+                modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
+                    .clickable { menuExpanded = true }.padding(horizontal = 18.dp, vertical = 7.dp))
+            androidx.compose.material.DropdownMenu(
+                expanded = menuExpanded,
+                onDismissRequest = { menuExpanded = false }
+            ) {
+                androidx.compose.material.DropdownMenuItem(onClick = {
+                    feedMode = "Grafs"; menuExpanded = false
+                }) { Text("Grafs") }
+                androidx.compose.material.DropdownMenuItem(onClick = {
+                    feedMode = "Chats"; menuExpanded = false
+                }) { Text("Chats") }
             }
         }
         if (feedMode == "Grafs") {
