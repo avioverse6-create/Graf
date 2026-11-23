@@ -179,8 +179,7 @@ private enum class GrafTab(val title: String, val icon: ImageVector) {
 private fun GrafApp() {
  val context=LocalContext.current
  val prefs=remember { context.getSharedPreferences("graf_prefs",0) }
- var dark by remember { mutableStateOf(prefs.getBoolean("dark_theme",true)) }
- var profileTheme by remember { mutableIntStateOf(prefs.getInt("profile_theme",1)) }
+ val dark = true
  var selectedTab by remember { mutableIntStateOf(0) }
  var settingsOpen by remember { mutableStateOf(false) }
  var profileName by remember { mutableStateOf(prefs.getString("profile_name","Alicia Brown") ?: "Alicia Brown") }
@@ -239,8 +238,8 @@ private fun GrafApp() {
      AnimatedContent(targetState=Pair(channelOpen,selectedTab),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
       when {
        state.first -> ChannelScreen(dark,foreground,secondary) { channelOpen=false }
-       state.second==3 && settingsOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,iconScale,iconBold,profileTheme,
-        onBack={settingsOpen=false},onProfileClick={settingsOpen=false},onThemeChange={dark=it;prefs.edit().putBoolean("dark_theme",it).apply()},onProfileThemeChange={profileTheme=it;prefs.edit().putInt("profile_theme",it).apply()},
+       state.second==3 && settingsOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,iconScale,iconBold,
+        onBack={settingsOpen=false},onProfileClick={settingsOpen=false},
         onScaleChange={textScale=it;prefs.edit().putFloat("text_scale",it).apply()},
         onBoldChange={boldText=it;prefs.edit().putBoolean("bold_text",it).apply()},
         onIconScaleChange={iconScale=it;prefs.edit().putFloat("icon_scale",it).apply()},
@@ -251,7 +250,7 @@ private fun GrafApp() {
         GrafTab.Home -> ChatsScreen(dark,foreground,secondary,query,{query=it},backdrop)
         GrafTab.Contact -> ContactsScreen(dark,foreground,secondary)
         GrafTab.Search -> SearchScreen(query,{query=it},dark,foreground,secondary) { channelOpen=false }
-        GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,profileTheme,
+        GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,
          onBack={selectedTab=0},onOpenSettings={settingsOpen=true},onPhoto={photoPicker.launch(arrayOf("image/*"))},
          onViewPhoto={if(profilePhoto!=null) photoViewer=true else photoPicker.launch(arrayOf("image/*"))},
          profileColor=Color(profileColor),onProfileColorChange={profileColor=it.toArgb();prefs.edit().putInt("profile_color",profileColor).apply()},
@@ -537,7 +536,7 @@ private fun ChannelScreen(dark: Boolean, foreground: Color, secondary: Color, on
 }
 
 @Composable
-private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,iconScale:Float,iconBold:Boolean,profileTheme:Int,onBack:()->Unit,onProfileClick:()->Unit,onThemeChange:(Boolean)->Unit,onProfileThemeChange:(Int)->Unit,onScaleChange:(Float)->Unit,onBoldChange:(Boolean)->Unit,onIconScaleChange:(Float)->Unit,onIconBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
+private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,iconScale:Float,iconBold:Boolean,onBack:()->Unit,onProfileClick:()->Unit,onScaleChange:(Float)->Unit,onBoldChange:(Boolean)->Unit,onIconScaleChange:(Float)->Unit,onIconBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
  val fill=if(dark) Color.White.copy(alpha=.10f) else Color.White.copy(alpha=.48f)
  val stroke=if(dark) Color.White.copy(alpha=.24f) else Color.White.copy(alpha=.78f)
  Column(Modifier.fillMaxSize().padding(horizontal=18.dp)) {
@@ -547,14 +546,6 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
   }
   SettingsGroup("АККАУНТ",foreground,secondary,fill,stroke) {
    SettingsRow(Icons.Rounded.Person,"Мой профиль","Фото и информация профиля",foreground,secondary,onProfileClick)
-  }
-  Spacer(Modifier.height(14.dp))
-  SettingsGroup("ВНЕШНИЙ ВИД",foreground,secondary,fill,stroke) {
-   SettingsRow(Icons.Rounded.LightMode,"Светлая тема","Белое оформление",foreground,secondary) { onThemeChange(false) }
-   SettingsRow(Icons.Rounded.DarkMode,"Тёмная тема","Тёмное оформление",foreground,secondary) { onThemeChange(true) }
-   SettingsRow(Icons.Rounded.Circle,"Чёрная тема профиля","Чёрный фон и единая тёмно-серая поверхность",foreground,secondary) { onProfileThemeChange(1) }
-   SettingsRow(Icons.Rounded.Circle,"Графитовая тема профиля","Сохранённая серая тема профиля",foreground,secondary) { onProfileThemeChange(0) }
-   Text(if(profileTheme==1) "Выбрана чёрная тема профиля" else "Выбрана графитовая тема профиля",color=secondary,fontSize=11.sp,modifier=Modifier.padding(start=16.dp,bottom=10.dp))
   }
   Spacer(Modifier.height(14.dp))
   SettingsGroup("ТЕКСТ И ШРИФТ",foreground,secondary,fill,stroke) {
@@ -685,7 +676,7 @@ private fun ProfileGlassIcon(icon:ImageVector,dark:Boolean,fill:Color,stroke:Bru
 }
 @Composable
 private fun ProfileScreen(
-    dark: Boolean, foreground: Color, secondary: Color, photo: Uri?, profileTheme: Int,
+    dark: Boolean, foreground: Color, secondary: Color, photo: Uri?,
     onBack: () -> Unit, onOpenSettings: () -> Unit, onPhoto: () -> Unit, onViewPhoto: () -> Unit,
     profileColor: Color, onProfileColorChange: (Color) -> Unit,
     profileName: String, profileUsername: String, profilePhone: String,
@@ -739,11 +730,8 @@ private fun ProfileScreen(
         }
     }
     // One shared surface tone for every profile component, independent of profile background theme.
-    val glassTone = if (dark) Color(0xFF363B42) else Color(0xFFE0E3E7)
-    val rim = Brush.linearGradient(listOf(Color.White.copy(alpha = .62f), Color.White.copy(alpha = .12f), Color.White.copy(alpha = .38f)))
-    var selectedSection by remember { mutableIntStateOf(0) }
-    val colors = listOf(Color(0xFF8994A5), Color(0xFF1688FF), Color(0xFF8B78D8), Color(0xFF48A99A), Color(0xFFD879A6), Color(0xFFD69A55), Color(0xFF6F8298), Color(0xFFE1E4EA))
-    val page = if (dark) { if (profileTheme == 1) Color.Black else Color(0xFF292E32) } else Color(0xFFB0B5B9)
+    val glassTone = Color(0xFF363B42)
+    val page = Color(0xFF292E32)
     val text = if (dark) Color(0xFFF5F7F8) else Color(0xFF202529)
     val mutedText = if (dark) Color(0xFFE0E3E5) else Color(0xFF50575C)
 
@@ -855,10 +843,10 @@ private fun ProfileScreen(
 
                     Spacer(Modifier.height(9.dp))
                     Row(Modifier.fillMaxWidth().padding(horizontal = 18.dp), horizontalArrangement = Arrangement.SpaceEvenly, verticalAlignment = Alignment.Top) {
-                        ProfileGlasmioAction(Icons.Rounded.PhotoCamera, "Фото", text, mutedText, glassTone, onPhoto)
-                        ProfileGlasmioAction(Icons.Rounded.Edit, "Изменить", text, mutedText, glassTone, { menuExpanded = true })
-                        ProfileGlasmioAction(Icons.Rounded.Settings, "Настройки", text, mutedText, glassTone, onOpenSettings)
-                        ProfileGlasmioAction(if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications, "Беззвучно", text, mutedText, glassTone, { muted = !muted })
+                        ProfileGlasmioAction(Icons.Rounded.PhotoCamera, "Фото", text, mutedText, onPhoto)
+                        ProfileGlasmioAction(Icons.Rounded.Edit, "Изменить", text, mutedText, { menuExpanded = true })
+                        ProfileGlasmioAction(Icons.Rounded.Settings, "Настройки", text, mutedText, onOpenSettings)
+                        ProfileGlasmioAction(if (muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications, "Беззвучно", text, mutedText, { muted = !muted })
                     }
                     Spacer(Modifier.height(16.dp))
                     Box(
@@ -1024,10 +1012,10 @@ private fun ProfileDataRow(title: String, value: String, foreground: Color, seco
 }
 
 @Composable
-private fun ProfileGlasmioAction(icon: ImageVector, label: String, foreground: Color, secondary: Color, surfaceColor: Color, onClick: () -> Unit) {
+private fun ProfileGlasmioAction(icon: ImageVector, label: String, foreground: Color, secondary: Color, onClick: () -> Unit) {
     Column(Modifier.width(68.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         // Use Glasmio's built-in button surface, rim and interaction treatment.
-        GlasmioIconButton(onClick = onClick, size = 50.dp, navigationSurfaceColor = surfaceColor) {
+        GlasmioIconButton(onClick = onClick, size = 50.dp) {
             GrafIcon(icon, label, foreground, 21.dp)
         }
         Spacer(Modifier.height(5.dp))
@@ -1057,10 +1045,10 @@ private fun ProfilePhotoViewer(uri:Uri,dark:Boolean,onClose:()->Unit) {
       GrafIcon(Icons.Rounded.Close,"Закрыть",text,22.dp)
      }
      Row(Modifier.align(Alignment.BottomCenter).fillMaxWidth().padding(horizontal=18.dp, vertical=34.dp),horizontalArrangement=Arrangement.SpaceEvenly,verticalAlignment=Alignment.Top) {
-      ProfileGlasmioAction(Icons.Rounded.PhotoCamera,"Фото",text,secondary,surfaceColor,onClose)
-      ProfileGlasmioAction(Icons.Rounded.Edit,"Изменить",text,secondary,surfaceColor,onClose)
-      ProfileGlasmioAction(Icons.Rounded.Settings,"Настройки",text,secondary,surfaceColor,onClose)
-      ProfileGlasmioAction(if(muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications,"Беззвучно",text,secondary,surfaceColor,{muted=!muted})
+      ProfileGlasmioAction(Icons.Rounded.PhotoCamera,"Фото",text,secondary,onClose)
+      ProfileGlasmioAction(Icons.Rounded.Edit,"Изменить",text,secondary,onClose)
+      ProfileGlasmioAction(Icons.Rounded.Settings,"Настройки",text,secondary,onClose)
+      ProfileGlasmioAction(if(muted) Icons.Rounded.NotificationsOff else Icons.Rounded.Notifications,"Беззвучно",text,secondary,{muted=!muted})
      }
     }
    }
