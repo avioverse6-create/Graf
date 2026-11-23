@@ -914,7 +914,6 @@ private fun ProfileScreen(
                         editProfileOpen = false
                     },
                     modifier = Modifier.fillMaxWidth().height(48.dp),
-                    navigationSurfaceColor = glassTone
                 ) {
                     Text("Сохранить изменения", color = text, fontSize = 14.sp, fontWeight = FontWeight.SemiBold)
                 }
@@ -968,38 +967,6 @@ private fun ProfileAddressMap(dark: Boolean, accent: Color) {
     }
 }
 
-@Composable
-private fun ProfileSectionsBar(selected: Int, onSelected: (Int) -> Unit, dark: Boolean, foreground: Color, secondary: Color, accent: Color) {
-    // A single compact Glasmio surface; the active half is only a soft fill,
-    // avoiding the stacked outlines/glass layers from the previous version.
-    GlassSurface(
-        modifier = Modifier.fillMaxWidth(.58f),
-        shape = CircleShape,
-        navigationSurfaceColor = accent,
-    ) {
-        BoxWithConstraints(Modifier.fillMaxWidth().padding(2.dp)) {
-            val half = maxWidth / 2
-            val offset by androidx.compose.animation.core.animateDpAsState(
-                targetValue = if (selected == 0) 0.dp else half,
-                animationSpec = spring(dampingRatio = .72f, stiffness = 420f),
-                label = "profile-section-indicator",
-            )
-            Box(
-                Modifier.offset(x = offset).width(half).height(26.dp)
-                    .clip(CircleShape)
-                    .background(accent.copy(alpha = if (dark) .14f else .10f))
-            )
-            Row(Modifier.fillMaxWidth().height(26.dp), verticalAlignment = Alignment.CenterVertically) {
-                Box(Modifier.weight(1f).fillMaxHeight().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onSelected(0) }, contentAlignment = Alignment.Center) {
-                    Text("Подарки", color = if (selected == 0) foreground else secondary, fontSize = 9.sp, maxLines = 1)
-                }
-                Box(Modifier.weight(1f).fillMaxHeight().clickable(interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }, indication = null) { onSelected(1) }, contentAlignment = Alignment.Center) {
-                    Text("Истории", color = if (selected == 1) foreground else secondary, fontSize = 9.sp, maxLines = 1)
-                }
-            }
-        }
-    }
-}
 
 @Composable
 private fun ProfileDataRow(title: String, value: String, foreground: Color, secondary: Color) {
@@ -1032,7 +999,6 @@ private fun ProfilePhotoViewer(uri:Uri,dark:Boolean,onClose:()->Unit) {
  var muted by remember { mutableStateOf(false) }
  val text = Color.White
  val secondary = Color.White.copy(alpha = .78f)
-  val surfaceColor = if (dark) Color(0xFF202326) else Color(0xFFB0B5B9)
  GlasmioTheme(isDark = dark) {
   GlasmioBackdropHost(
    modifier = Modifier.fillMaxSize(),
