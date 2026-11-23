@@ -478,7 +478,7 @@ private fun ChatsScreen(
             oldOffset = offset
         }
     }
-    LaunchedEffect(activeChat?.handle, messagesByChat[activeChat?.handle]?.size) {
+    LaunchedEffect(activeChat?.handle, activeChat?.let { messagesByChat[it.handle].orEmpty().size }) {
         val count = activeChat?.let { messagesByChat[it.handle].orEmpty().size } ?: 0
         if (count > 0) messageListState.animateScrollToItem(count - 1)
     }
