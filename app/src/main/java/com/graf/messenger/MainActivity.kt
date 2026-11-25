@@ -270,10 +270,12 @@ private fun GrafApp() {
                         Text("Graf", color = foreground, fontSize = 29.sp, fontWeight = FontWeight.W900,
                             maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f))
-                        GlasmioIconButton(
-                            onClick = { android.widget.Toast.makeText(context, "Создание чата пока недоступно", android.widget.Toast.LENGTH_SHORT).show() },
-                            size = 46.dp
-                        ) { GrafIcon(Icons.Rounded.Add, "Создать чат", foreground, 23.dp) }
+                        GlasmioTheme(isDark = dark) {
+                            GlasmioIconButton(
+                                onClick = { android.widget.Toast.makeText(context, "Создание чата пока недоступно", android.widget.Toast.LENGTH_SHORT).show() },
+                                size = 46.dp
+                            ) { GrafIcon(Icons.Rounded.Add, "Создать чат", foreground, 23.dp) }
+                        }
                     }
                     AnimatedContent(
                         targetState = selectedTab,
