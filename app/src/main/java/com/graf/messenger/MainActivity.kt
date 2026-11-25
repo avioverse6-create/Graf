@@ -139,9 +139,9 @@ private val Blue = Color(0xFF1688FF)
 private val LocalGrafIconScale = staticCompositionLocalOf { 1f }
 private val LocalGrafIconBold = staticCompositionLocalOf { false }
 private fun grafGlassRim() = PrismalSpecular.Default.copy(
-    width = 1.dp,
-    blurRadius = 0.6.dp,
-    style = PrismalSpecularStyle.Default(color = Color.White.copy(alpha = 0.78f))
+    width = 0.85.dp,
+    blurRadius = 0.45.dp,
+    style = PrismalSpecularStyle.Default(color = Color(0xFF555B64).copy(alpha = 0.48f))
 )
 
 class MainActivity : ComponentActivity() {
@@ -329,17 +329,19 @@ private fun GrafApp() {
                     .background(background)
             ) {
                 Column(Modifier.fillMaxSize()) {
-                    Row(
-                        Modifier.fillMaxWidth().padding(start = 22.dp, end = 18.dp, top = 8.dp, bottom = 8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Text("Graf", color = foreground, fontSize = 29.sp, fontWeight = FontWeight.W900,
-                            maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.weight(1f))
-                        GlasmioIconButton(
-                            onClick = { android.widget.Toast.makeText(context, "Создание чата пока недоступно", android.widget.Toast.LENGTH_SHORT).show() },
-                            size = 46.dp
-                        ) { GrafIcon(Icons.Rounded.Add, "Создать чат", foreground, 23.dp) }
+                    if (selectedTab == 0) {
+                        Row(
+                            Modifier.fillMaxWidth().padding(start = 22.dp, end = 18.dp, top = 8.dp, bottom = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text("Graf", color = foreground, fontSize = 29.sp, fontWeight = FontWeight.W900,
+                                maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier.weight(1f))
+                            GlasmioIconButton(
+                                onClick = { android.widget.Toast.makeText(context, "Создание чата пока недоступно", android.widget.Toast.LENGTH_SHORT).show() },
+                                size = 46.dp
+                            ) { GrafIcon(Icons.Rounded.Add, "Создать чат", foreground, 23.dp) }
+                        }
                     }
                     AnimatedContent(
                         targetState = selectedTab,
@@ -479,9 +481,17 @@ private fun RowScope.GrafBottomTab(index: Int, tab: GrafTab, selected: Int, dark
                     ).didOverflowWidth
                 } ?: 6
             }
-            Text(tab.title, color = tabTint, fontSize = fittedSize.sp, maxLines = 1,
-                softWrap = false, overflow = TextOverflow.Clip, textAlign = TextAlign.Center,
-                modifier = Modifier.fillMaxWidth())
+            Text(
+                tab.title,
+                color = tabTint,
+                fontSize = minOf(fittedSize, 9).sp,
+                letterSpacing = (-0.25).sp,
+                maxLines = 1,
+                softWrap = false,
+                overflow = TextOverflow.Clip,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 1.dp)
+            )
         }
     }
 }
