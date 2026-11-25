@@ -138,10 +138,10 @@ private val Muted = Color(0xFF7D8493)
 private val Blue = Color(0xFF1688FF)
 private val LocalGrafIconScale = staticCompositionLocalOf { 1f }
 private val LocalGrafIconBold = staticCompositionLocalOf { false }
-private fun grafGlassRim() = PrismalSpecular.Default.copy(
-    width = 1.dp,
-    blurRadius = 0.6.dp,
-    style = PrismalSpecularStyle.Default(color = Color.White.copy(alpha = 0.78f))
+private fun grafGlassRim(dark: Boolean) = PrismalSpecular.Default.copy(
+    width = 0.85.dp,
+    blurRadius = 0.55.dp,
+    style = PrismalSpecularStyle.Default(color = if (dark) Color.White.copy(alpha = 0.72f) else Color(0xFF64748B).copy(alpha = 0.38f))
 )
 
 class MainActivity : ComponentActivity() {
@@ -199,7 +199,7 @@ private enum class GrafTab(val title: String, val icon: ImageVector) {
 private fun GrafApp() {
     val context = LocalContext.current
     val prefs = remember { context.getSharedPreferences("graf_prefs", 0) }
-    val dark = true
+    var dark by remember { mutableStateOf(prefs.getBoolean("dark_theme", true)) }
     var selectedTab by remember { mutableIntStateOf(0) }
     var bottomBarVisible by remember { mutableStateOf(true) }
     var customFontPath by remember { mutableStateOf(prefs.getString("font_path", null)) }
@@ -231,11 +231,10 @@ private fun GrafApp() {
         }
     }
 
-    val background = Brush.verticalGradient(
-        listOf(Color(0xFF000000), Color(0xFF050505), Color(0xFF000000))
-    )
-    val foreground = Color(0xFFF5F7FC)
-    val secondary = Color(0xFFB5C0D0)
+    val background = if (dark) Brush.verticalGradient(listOf(Color(0xFF000000), Color(0xFF050505), Color(0xFF000000)))
+        else Brush.verticalGradient(listOf(Color(0xFFF5F7FA), Color.White, Color(0xFFF0F3F7)))
+    val foreground = if (dark) Color(0xFFF5F7FC) else Color(0xFF171B22)
+    val secondary = if (dark) Color(0xFFB5C0D0) else Color(0xFF667085)
     val appFont = remember(customFontPath) {
         runCatching {
             customFontPath?.let { FontFamily(Font(File(it), weight = FontWeight.Normal)) }
@@ -244,7 +243,7 @@ private fun GrafApp() {
     val density = LocalDensity.current
     val themedConfiguration = Configuration(LocalConfiguration.current).apply {
         uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
-            Configuration.UI_MODE_NIGHT_YES
+            if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
     }
 
     CompositionLocalProvider(
@@ -288,6 +287,7 @@ private fun GrafApp() {
                                 onBack = { selectedTab = 0 },
                                 onProfileClick = { selectedTab = 3 },
                                 onScaleChange = { textScale = it; prefs.edit().putFloat("text_scale", it).apply() },
+                                onThemeChange = { dark = it; prefs.edit().putBoolean("dark_theme", it).apply() },
                                 onBoldChange = { boldText = it; prefs.edit().putBoolean("bold_text", it).apply() },
                                 onIconScaleChange = { iconScale = it; prefs.edit().putFloat("icon_scale", it).apply() },
                                 onIconBoldChange = { iconBold = it; prefs.edit().putBoolean("icon_bold", it).apply() },
@@ -324,6 +324,7 @@ private fun GrafApp() {
                     backdrop = backdrop,
                     tabsCount = GrafTab.entries.size,
                     tintDropletContent = false,
+                    specular = { grafGlassRim(dark) },
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp).fillMaxWidth()
                 ) {
                     GrafTab.entries.forEachIndexed { index, tab ->
@@ -625,19 +626,13 @@ private fun ChatsScreen(
                     if (activeChat != null) {
                         // Telegram Android's MotionBackgroundDrawable default four-colour palette.
                         // Telegram renders these generated gradient wallpapers rather than relying on a fixed bitmap.
-                        Box(
-                            Modifier.fillMaxSize().background(
-                                Brush.linearGradient(
-                                    listOf(
-                                        Color(0xFF426D57),
-                                        Color(0xFFF7E48B),
-                                        Color(0xFF87A284),
-                                        Color(0xFFFDF6CA)
-                                    )
-                                )
-                            )
-                        )
-                        Box(Modifier.fillMaxSize().background(Color(0xFF071018).copy(alpha = .82f)))
+                        if (dark) {
+                            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF426D57), Color(0xFFF7E48B), Color(0xFF87A284), Color(0xFFFDF6CA)))))
+                            Box(Modifier.fillMaxSize().background(Color(0xFF071018).copy(alpha = .82f)))
+                        } else {
+                            Box(Modifier.fillMaxSize().background(Color(0xFFE7EDF4)))
+                            Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = .70f)))
+                        }
                         val chat = activeChat!!
                         val messages = messagesByChat[chat.handle].orEmpty()
                         LazyColumn(
@@ -667,8 +662,8 @@ private fun ChatsScreen(
                                                     if (isMine) androidx.compose.foundation.shape.RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp)
                                                     else androidx.compose.foundation.shape.RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp)
                                                 )
-                                                .background(if (isMine) Color(0xFF234F69).copy(alpha = .94f) else Color(0xFF202A35).copy(alpha = .96f))
-                                                .border(1.dp, Color.White.copy(alpha = .12f), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                                                .background(if (dark) { if (isMine) Color(0xFF234F69).copy(alpha = .94f) else Color(0xFF202A35).copy(alpha = .96f) } else { if (isMine) Color(0xFFDCEEFF) else Color.White })
+                                                .border(1.dp, if (dark) Color.White.copy(alpha = .12f) else Color(0xFFD9E0E8), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
                                                 .combinedClickable(
                                                     onClick = {},
                                                     onLongClick = { selectedMessage = message }
@@ -679,11 +674,11 @@ private fun ChatsScreen(
                                                 Column(
                                                     Modifier.fillMaxWidth().padding(bottom = 6.dp)
                                                         .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
-                                                        .background(Color.White.copy(alpha = .10f))
+                                                        .background(if (dark) Color.White.copy(alpha = .10f) else Color(0xFF172033).copy(alpha = .06f))
                                                         .padding(start = 8.dp, top = 5.dp, bottom = 5.dp, end = 7.dp)
                                                 ) {
-                                                    Text("Ответ", color = Color(0xFF9EDBFF), fontSize = 10.sp, fontWeight = FontWeight.Bold)
-                                                    Text(message.replyTo, color = Color.White.copy(alpha = .78f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                    Text("Ответ", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                                    Text(message.replyTo, color = foreground.copy(alpha = .78f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                                 }
                                             }
                                             if (message.photoUri != null) {
@@ -698,7 +693,7 @@ private fun ChatsScreen(
                                             if (message.text.isNotEmpty()) {
                                                 Text(
                                                     message.text,
-                                                    color = Color.White,
+                                                    color = foreground,
                                                     fontSize = 14.sp,
                                                     lineHeight = 19.sp
                                                 )
@@ -707,7 +702,7 @@ private fun ChatsScreen(
                                                 Modifier.align(Alignment.End).padding(top = 4.dp),
                                                 verticalAlignment = Alignment.CenterVertically
                                             ) {
-                                                Text(message.time, color = Color.White.copy(alpha = .62f), fontSize = 10.sp)
+                                                Text(message.time, color = (if (dark) Color.White else Color(0xFF344054)).copy(alpha = .62f), fontSize = 10.sp)
                                                 if (isMine) {
                                                     Spacer(Modifier.width(4.dp))
                                                     Text("✓✓", color = Color(0xFF9EDBFF), fontSize = 10.sp)
@@ -763,7 +758,7 @@ private fun ChatsScreen(
                             }
                         }
                     } else {
-                        Box(Modifier.fillMaxSize().background(Color(0xFF050608)))
+                        Box(Modifier.fillMaxSize().background(if (dark) Color(0xFF050608) else Color(0xFFF5F7FA)))
                         if (mode == "Chats") {
                             LazyColumn(
                                 state = chatListState,
@@ -823,7 +818,7 @@ private fun ChatsScreen(
                                         }.padding(horizontal = 18.dp, vertical = 13.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
-                                        Box(Modifier.size(50.dp).clip(CircleShape).background(Color(0xFF283642)), contentAlignment = Alignment.Center) {
+                                        Box(Modifier.size(50.dp).clip(CircleShape).background(if (dark) Color(0xFF283642) else Color(0xFFE4EAF1)), contentAlignment = Alignment.Center) {
                                             Text(contact.name.take(1), color = foreground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
                                         }
                                         Spacer(Modifier.width(12.dp))
@@ -920,7 +915,7 @@ private fun ChatsScreen(
                                     Spacer(Modifier.width(4.dp))
                                     Box(
                                         Modifier.weight(1f).clip(androidx.compose.foundation.shape.RoundedCornerShape(22.dp))
-                                            .background(Color.White.copy(alpha = .085f)).padding(horizontal = 13.dp, vertical = 11.dp)
+                                            .background(if (dark) Color.White.copy(alpha = .085f) else Color(0xFF182230).copy(alpha = .055f)).padding(horizontal = 13.dp, vertical = 11.dp)
                                     ) {
                                         if (draft.isEmpty()) Text("Сообщение", color = secondary, fontSize = 14.sp)
                                         BasicTextField(
@@ -1008,7 +1003,7 @@ private fun ChannelScreen(dark: Boolean, foreground: Color, secondary: Color, on
 }
 
 @Composable
-private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,iconScale:Float,iconBold:Boolean,onBack:()->Unit,onProfileClick:()->Unit,onScaleChange:(Float)->Unit,onBoldChange:(Boolean)->Unit,onIconScaleChange:(Float)->Unit,onIconBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
+private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,iconScale:Float,iconBold:Boolean,onBack:()->Unit,onProfileClick:()->Unit,onScaleChange:(Float)->Unit,onThemeChange:(Boolean)->Unit,onBoldChange:(Boolean)->Unit,onIconScaleChange:(Float)->Unit,onIconBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
  val fill=if(dark) Color.White.copy(alpha=.10f) else Color.White.copy(alpha=.48f)
  val stroke=if(dark) Color.White.copy(alpha=.24f) else Color.White.copy(alpha=.78f)
  Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal=18.dp).padding(bottom=108.dp)) {
@@ -1214,8 +1209,8 @@ private fun ProfileScreen(
         }
     }
     // One shared surface tone for every profile component, independent of profile background theme.
-    val glassTone = Color(0xFF25272B)
-    val page = Color.Black
+    val glassTone = if (dark) Color(0xFF25272B) else Color(0xFFE7ECF2)
+    val page = if (dark) Color.Black else Color(0xFFF5F7FA)
     val text = if (dark) Color(0xFFF5F7F8) else Color(0xFF202529)
     val mutedText = if (dark) Color(0xFFE0E3E5) else Color(0xFF50575C)
 
