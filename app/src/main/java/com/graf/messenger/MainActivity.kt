@@ -243,7 +243,7 @@ private fun GrafApp() {
     val density = LocalDensity.current
     val themedConfiguration = Configuration(LocalConfiguration.current).apply {
         uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
-            if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO
+            (if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
     }
 
     CompositionLocalProvider(
@@ -785,7 +785,7 @@ private fun ChatsScreen(
                                             Text(chat.name.take(1).uppercase(), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
                                             if (chat.online) Box(
                                                 Modifier.align(Alignment.BottomEnd).padding(2.dp).size(12.dp).clip(CircleShape)
-                                                    .background(Color(0xFF4DD58A)).border(2.dp, Color(0xFF080B10), CircleShape)
+                                                    .background(Color(0xFF4DD58A)).border(2.dp, if (dark) Color(0xFF080B10) else Color.White, CircleShape)
                                             )
                                         }
                                         Spacer(Modifier.width(13.dp))
@@ -800,7 +800,7 @@ private fun ChatsScreen(
                                             ) { Text(chat.unread.toString(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
                                         }
                                     }
-                                    Box(Modifier.fillMaxWidth().padding(start = 86.dp).height(.6.dp).background(Color.White.copy(alpha = .08f)))
+                                    Box(Modifier.fillMaxWidth().padding(start = 86.dp).height(.6.dp).background(if (dark) Color.White.copy(alpha = .08f) else Color(0xFFE1E6ED)))
                                 }
                             }
                         } else {
@@ -851,7 +851,7 @@ private fun ChatsScreen(
                                 }, size = 42.dp) { GrafIcon(Icons.Rounded.ArrowBack, "Назад", foreground, 21.dp) }
                                 Box(Modifier.size(40.dp).clip(CircleShape).background(Color(0xFF2D5268)), contentAlignment = Alignment.Center) {
                                     Text(chat.name.take(1), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
-                                    if (chat.online) Box(Modifier.align(Alignment.BottomEnd).size(10.dp).clip(CircleShape).background(Color(0xFF4DD58A)).border(1.5.dp, Color(0xFF17232D), CircleShape))
+                                    if (chat.online) Box(Modifier.align(Alignment.BottomEnd).size(10.dp).clip(CircleShape).background(Color(0xFF4DD58A)).border(1.5.dp, if (dark) Color(0xFF17232D) else Color.White, CircleShape))
                                 }
                                 Spacer(Modifier.width(10.dp))
                                 Column(Modifier.weight(1f)) {
