@@ -176,112 +176,153 @@ private val GrafSettingsCogIcon: ImageVector by lazy {
 }
 
 private enum class GrafTab(val title: String, val icon: ImageVector) {
-    Home("Chats", Icons.Rounded.Chat),
-    Settings("Profile", Icons.Rounded.Person)
+    Chats("Чаты", Icons.Rounded.Chat),
+    Contacts("Контакты", Icons.Rounded.Contacts),
+    Settings("Настройки", Icons.Rounded.Settings),
+    Profile("Профиль", Icons.Rounded.Person)
 }
 
 @Composable
 private fun GrafApp() {
- val context=LocalContext.current
- val prefs=remember { context.getSharedPreferences("graf_prefs",0) }
- val dark = true
- var selectedTab by remember { mutableIntStateOf(0) }
- var bottomBarVisible by remember { mutableStateOf(true) }
- var settingsOpen by remember { mutableStateOf(false) }
- var profileName by remember { mutableStateOf(prefs.getString("profile_name","Alicia Brown") ?: "Alicia Brown") }
- var profileUsername by remember { mutableStateOf(prefs.getString("profile_username","username") ?: "username") }
- var profilePhone by remember { mutableStateOf(prefs.getString("profile_phone","+1488 1234 8922") ?: "+1488 1234 8922") }
- var profileAddress by remember { mutableStateOf(prefs.getString("profile_address","0-27-14") ?: "0-27-14") }
- var profileBirthday by remember { mutableStateOf(prefs.getString("profile_birthday","") ?: "") }
- var profileChannels by remember { mutableStateOf(prefs.getString("profile_channels","") ?: "") }
- var channelOpen by remember { mutableStateOf(false) }
- val activity = context as? ComponentActivity
- SideEffect {
-  // Draw the app background behind system bars, but keep all interactive content
-  // below the status bar on every screen. Never hide the status bar on the profile.
-  activity?.window?.decorView?.systemUiVisibility =
-   android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-    android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-    android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-    android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
-    android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-    android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
- }
+    val context = LocalContext.current
+    val prefs = remember { context.getSharedPreferences("graf_prefs", 0) }
+    val dark = true
+    var selectedTab by remember { mutableIntStateOf(0) }
+    var bottomBarVisible by remember { mutableStateOf(true) }
+    var customFontPath by remember { mutableStateOf(prefs.getString("font_path", null)) }
+    var textScale by remember { mutableFloatStateOf(prefs.getFloat("text_scale", 1f)) }
+    var boldText by remember { mutableStateOf(prefs.getBoolean("bold_text", true)) }
+    var iconScale by remember { mutableFloatStateOf(prefs.getFloat("icon_scale", 1f)) }
+    var iconBold by remember { mutableStateOf(prefs.getBoolean("icon_bold", false)) }
+    val backdrop = rememberPrismalGlassLayer()
+    val activity = context as? ComponentActivity
 
- var photoViewer by remember { mutableStateOf(false) }
- 
- var profilePhoto by remember { mutableStateOf(prefs.getString("profile_photo",null)?.let(Uri::parse)) }
- var profileColor by remember { mutableIntStateOf(prefs.getInt("profile_color",0xFF8994A5.toInt())) }
- var customFontPath by remember { mutableStateOf(prefs.getString("font_path",null)) }
- var textScale by remember { mutableFloatStateOf(prefs.getFloat("text_scale",1f)) }
- var boldText by remember { mutableStateOf(prefs.getBoolean("bold_text",true)) }
- var iconScale by remember { mutableFloatStateOf(prefs.getFloat("icon_scale",1f)) }
- var iconBold by remember { mutableStateOf(prefs.getBoolean("icon_bold",false)) }
- val backdrop=rememberPrismalGlassLayer()
- val photoPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-  if(uri!=null) { runCatching { context.contentResolver.takePersistableUriPermission(uri,android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION) }; profilePhoto=uri; prefs.edit().putString("profile_photo",uri.toString()).apply() }
- }
- val fontPicker=rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-  if(uri!=null) runCatching { context.contentResolver.openInputStream(uri)?.use { input -> val file=File(context.filesDir,"graf_custom_font.ttf"); FileOutputStream(file).use { input.copyTo(it) }; customFontPath=file.absolutePath; prefs.edit().putString("font_path",file.absolutePath).apply() } }
- }
- val background=if(dark) Brush.verticalGradient(listOf(Color(0xFF000000),Color(0xFF050505),Color(0xFF000000))) else Brush.verticalGradient(listOf(Color(0xFFF7F7F8),Color(0xFFE9EAED)))
- val foreground=if(dark) Color(0xFFF5F7FC) else Color(0xFF171B24)
- val secondary=if(dark) Color(0xFFB5C0D0) else Color(0xFF596273)
- val appFont=remember(customFontPath) { runCatching { customFontPath?.let { FontFamily(Font(File(it),weight=FontWeight.Normal)) } }.getOrNull() ?: FontFamily(Font(R.font.inter_variable,weight=FontWeight.W900)) }
- val density=LocalDensity.current
- val themedConfiguration = Configuration(LocalConfiguration.current).apply {
-  uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
-   (if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
- }
- CompositionLocalProvider(LocalConfiguration provides themedConfiguration,
-  LocalDensity provides Density(density.density,(density.fontScale*textScale).coerceIn(.75f,1.5f)),
-  LocalTextStyle provides TextStyle(fontFamily=appFont,fontWeight=if(boldText) FontWeight.W900 else FontWeight.Normal),
-  LocalGrafIconScale provides iconScale,
-  LocalGrafIconBold provides iconBold) {
-  Box(Modifier.fillMaxSize()) {
-   Box(Modifier.fillMaxSize().prismalGlassLayer(backdrop).background(background)) {
-    Column(Modifier.fillMaxSize().padding(top = 24.dp)) {
-     AnimatedContent(targetState=Pair(channelOpen,selectedTab),transitionSpec={ fadeIn() togetherWith fadeOut() },label="graf-screen") { state ->
-      when {
-       state.first -> ChannelScreen(dark,foreground,secondary) { channelOpen=false }
-       state.second==1 && settingsOpen -> SettingsScreen(dark,foreground,secondary,textScale,boldText,iconScale,iconBold,
-        onBack={settingsOpen=false},onProfileClick={settingsOpen=false},
-        onScaleChange={textScale=it;prefs.edit().putFloat("text_scale",it).apply()},
-        onBoldChange={boldText=it;prefs.edit().putBoolean("bold_text",it).apply()},
-        onIconScaleChange={iconScale=it;prefs.edit().putFloat("icon_scale",it).apply()},
-        onIconBoldChange={iconBold=it;prefs.edit().putBoolean("icon_bold",it).apply()},
-        onFontPick={fontPicker.launch(arrayOf("font/ttf","application/x-font-ttf","application/octet-stream"))},
-        onFontReset={customFontPath=null;prefs.edit().remove("font_path").apply()},hasCustomFont=customFontPath!=null)
-       else -> when(GrafTab.entries[state.second]) {
-        GrafTab.Home -> ChatsScreen(dark,foreground,secondary,textScale,{ textScale=it; prefs.edit().putFloat("text_scale",it).apply() },{ bottomBarVisible=it })
-        GrafTab.Settings -> ProfileScreen(dark,foreground,secondary,profilePhoto,
-         onBack={selectedTab=0},onOpenSettings={settingsOpen=true},onPhoto={photoPicker.launch(arrayOf("image/*"))},
-         onViewPhoto={if(profilePhoto!=null) photoViewer=true else photoPicker.launch(arrayOf("image/*"))},
-         profileColor=Color(profileColor),onProfileColorChange={profileColor=it.toArgb();prefs.edit().putInt("profile_color",profileColor).apply()},
-         profileName=profileName,profileUsername=profileUsername,profilePhone=profilePhone,
-         profileAddress=profileAddress,profileBirthday=profileBirthday,profileChannels=profileChannels,
-         onSaveProfile={name,username,phone,address,birthday,channels ->
-          profileName=name;profileUsername=username;profilePhone=phone;profileAddress=address;profileBirthday=birthday;profileChannels=channels
-          prefs.edit().putString("profile_name",name).putString("profile_username",username).putString("profile_phone",phone)
-           .putString("profile_address",address).putString("profile_birthday",birthday).putString("profile_channels",channels).apply()})
-       }
-      }
-     }
+    SideEffect {
+        activity?.window?.decorView?.systemUiVisibility =
+            android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
+                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
+                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
+                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
+                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
     }
-   }
-   if(!channelOpen) {
-    AnimatedVisibility(visible=bottomBarVisible || selectedTab!=0 || settingsOpen,modifier=Modifier.align(Alignment.BottomCenter),
-     enter=androidx.compose.animation.slideInVertically(initialOffsetY={it})+fadeIn(),
-     exit=androidx.compose.animation.slideOutVertically(targetOffsetY={it})+fadeOut()) {
-     PrismalGlassBottomTabs(selectedTabIndex={selectedTab},onTabSelected={selectedTab=it;settingsOpen=false;bottomBarVisible=true},backdrop=backdrop,tabsCount=GrafTab.entries.size,tintDropletContent=false,
-      modifier=Modifier.padding(horizontal=20.dp,vertical=10.dp).fillMaxWidth()) {
-      GrafTab.entries.forEachIndexed { index,tab -> GrafBottomTab(index,tab,selectedTab,dark) { selectedTab=index;settingsOpen=false;bottomBarVisible=true } }
-     }
+
+    val fontPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+        if (uri != null) runCatching {
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                val file = File(context.filesDir, "graf_custom_font.ttf")
+                FileOutputStream(file).use { input.copyTo(it) }
+                customFontPath = file.absolutePath
+                prefs.edit().putString("font_path", file.absolutePath).apply()
+            }
+        }
     }
-   }
-   if(photoViewer && profilePhoto!=null) ProfilePhotoViewer(profilePhoto!!,dark) { photoViewer=false }
-  }
- }
+
+    val background = Brush.verticalGradient(
+        listOf(Color(0xFF000000), Color(0xFF050505), Color(0xFF000000))
+    )
+    val foreground = Color(0xFFF5F7FC)
+    val secondary = Color(0xFFB5C0D0)
+    val appFont = remember(customFontPath) {
+        runCatching {
+            customFontPath?.let { FontFamily(Font(File(it), weight = FontWeight.Normal)) }
+        }.getOrNull() ?: FontFamily(Font(R.font.inter_variable, weight = FontWeight.W900))
+    }
+    val density = LocalDensity.current
+    val themedConfiguration = Configuration(LocalConfiguration.current).apply {
+        uiMode = (uiMode and Configuration.UI_MODE_NIGHT_MASK.inv()) or
+            Configuration.UI_MODE_NIGHT_YES
+    }
+
+    CompositionLocalProvider(
+        LocalConfiguration provides themedConfiguration,
+        LocalDensity provides Density(density.density, (density.fontScale * textScale).coerceIn(.75f, 1.5f)),
+        LocalTextStyle provides TextStyle(
+            fontFamily = appFont,
+            fontWeight = if (boldText) FontWeight.W900 else FontWeight.Normal
+        ),
+        LocalGrafIconScale provides iconScale,
+        LocalGrafIconBold provides iconBold
+    ) {
+        Box(Modifier.fillMaxSize()) {
+            Box(
+                Modifier
+                    .fillMaxSize()
+                    .prismalGlassLayer(backdrop)
+                    .background(background)
+            ) {
+                Column(Modifier.fillMaxSize().padding(top = 24.dp)) {
+                    AnimatedContent(
+                        targetState = selectedTab,
+                        transitionSpec = { fadeIn() togetherWith fadeOut() },
+                        label = "graf-screen"
+                    ) { tab ->
+                        when (GrafTab.entries[tab]) {
+                            GrafTab.Chats -> ChatsScreen(
+                                dark, foreground, secondary, textScale,
+                                { textScale = it; prefs.edit().putFloat("text_scale", it).apply() },
+                                { bottomBarVisible = it },
+                                initialMode = "Chats"
+                            )
+                            GrafTab.Contacts -> ChatsScreen(
+                                dark, foreground, secondary, textScale,
+                                { textScale = it; prefs.edit().putFloat("text_scale", it).apply() },
+                                { bottomBarVisible = it },
+                                initialMode = "Contacts"
+                            )
+                            GrafTab.Settings -> SettingsScreen(
+                                dark, foreground, secondary, textScale, boldText, iconScale, iconBold,
+                                onBack = { selectedTab = 0 },
+                                onProfileClick = { selectedTab = 3 },
+                                onScaleChange = { textScale = it; prefs.edit().putFloat("text_scale", it).apply() },
+                                onBoldChange = { boldText = it; prefs.edit().putBoolean("bold_text", it).apply() },
+                                onIconScaleChange = { iconScale = it; prefs.edit().putFloat("icon_scale", it).apply() },
+                                onIconBoldChange = { iconBold = it; prefs.edit().putBoolean("icon_bold", it).apply() },
+                                onFontPick = {
+                                    fontPicker.launch(arrayOf("font/ttf", "application/x-font-ttf", "application/octet-stream"))
+                                },
+                                onFontReset = {
+                                    customFontPath = null
+                                    prefs.edit().remove("font_path").apply()
+                                },
+                                hasCustomFont = customFontPath != null
+                            )
+                            GrafTab.Profile -> SimpleScreen(
+                                "Профиль",
+                                "Профиль пока недоступен",
+                                Icons.Rounded.Person,
+                                foreground,
+                                secondary
+                            )
+                        }
+                    }
+                }
+            }
+
+            AnimatedVisibility(
+                visible = bottomBarVisible || selectedTab != 0,
+                modifier = Modifier.align(Alignment.BottomCenter),
+                enter = androidx.compose.animation.slideInVertically(initialOffsetY = { it }) + fadeIn(),
+                exit = androidx.compose.animation.slideOutVertically(targetOffsetY = { it }) + fadeOut()
+            ) {
+                PrismalGlassBottomTabs(
+                    selectedTabIndex = { selectedTab },
+                    onTabSelected = { selectedTab = it; bottomBarVisible = true },
+                    backdrop = backdrop,
+                    tabsCount = GrafTab.entries.size,
+                    tintDropletContent = false,
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp).fillMaxWidth()
+                ) {
+                    GrafTab.entries.forEachIndexed { index, tab ->
+                        GrafBottomTab(index, tab, selectedTab, dark) {
+                            selectedTab = index
+                            bottomBarVisible = true
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 @Composable
 private fun GrafSettingsCog(active: Boolean, tint: Color) {
@@ -447,6 +488,7 @@ private fun ChatsScreen(
     textScale: Float,
     onTextScaleChange: (Float) -> Unit,
     onScrollChrome: (Boolean) -> Unit,
+    initialMode: String = "Chats",
 ) {
     data class Chat(val name: String, val handle: String, val preview: String, val time: String, val unread: Int, val online: Boolean)
     val chats = listOf(
@@ -464,7 +506,7 @@ private fun ChatsScreen(
         Chat("Никита", "@nikita", "Был давно", "", 0, false),
         Chat("Екатерина", "@kate", "В сети", "", 0, true)
     )
-    var mode by remember { mutableStateOf("Chats") }
+    var mode by remember(initialMode) { mutableStateOf(initialMode) }
     var menuExpanded by remember { mutableStateOf(false) }
     var chatMenuExpanded by remember { mutableStateOf(false) }
     var activeChat by remember { mutableStateOf<Chat?>(null) }
@@ -711,7 +753,7 @@ private fun ChatsScreen(
                             LazyColumn(
                                 state = chatListState,
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(top = 68.dp, bottom = 104.dp),
+                                contentPadding = PaddingValues(top = 12.dp, bottom = 104.dp),
                                 verticalArrangement = Arrangement.spacedBy(1.dp)
                             ) {
                                 items(chats, key = { it.handle }) { chat ->
@@ -755,7 +797,7 @@ private fun ChatsScreen(
                             LazyColumn(
                                 state = chatListState,
                                 modifier = Modifier.fillMaxSize(),
-                                contentPadding = PaddingValues(top = 68.dp, bottom = 104.dp)
+                                contentPadding = PaddingValues(top = 12.dp, bottom = 104.dp)
                             ) {
                                 items(contacts, key = { it.handle }) { contact ->
                                     Row(
@@ -783,55 +825,7 @@ private fun ChatsScreen(
                 }
             },
             overlayContent = {
-                if (activeChat == null) {
-                    Column(Modifier.fillMaxSize()) {
-                        GlassSurface(
-                            modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp).height(56.dp),
-                            shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
-                        ) {
-                            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                                GlasmioMenu(
-                                    expanded = menuExpanded,
-                                    onExpandedChange = { menuExpanded = it },
-                                    itemCount = 2,
-                                    centerHorizontally = true,
-                                    forceBelowAnchor = true,
-                                    menuWidth = 224.dp,
-                                    anchor = { open ->
-                                        Text(
-                                            "GRAF",
-                                            color = foreground,
-                                            fontFamily = FontFamily.Serif,
-                                            fontWeight = FontWeight.Bold,
-                                            fontSize = 25.sp,
-                                            letterSpacing = 4.sp,
-                                            modifier = Modifier.clip(androidx.compose.foundation.shape.RoundedCornerShape(12.dp))
-                                                .clickable(onClick = open).padding(horizontal = 18.dp, vertical = 7.dp)
-                                        )
-                                    }
-                                ) { menuBackdrop, close ->
-                                    GlasmioMenuItem(
-                                        title = "Chats",
-                                        subtitle = "Личные сообщения",
-                                        onClick = { mode = "Chats"; menuExpanded = false; close() },
-                                        systemName = "bubble.left.and.bubble.right",
-                                        backdrop = menuBackdrop,
-                                        enabled = true
-                                    )
-                                    GlasmioMenuItem(
-                                        title = "Contacts",
-                                        subtitle = "Найти собеседника",
-                                        onClick = { mode = "Contacts"; menuExpanded = false; close() },
-                                        systemName = "person.2",
-                                        backdrop = menuBackdrop,
-                                        enabled = true
-                                    )
-                                }
-                            }
-                        }
-                        Spacer(Modifier.weight(1f))
-                    }
-                } else {
+                if (activeChat != null) {
                     val chat = activeChat!!
                     Column(Modifier.fillMaxSize()) {
                         GlassSurface(
