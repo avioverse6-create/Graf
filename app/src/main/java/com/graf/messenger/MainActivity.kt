@@ -251,7 +251,11 @@ private fun GrafApp() {
         LocalGrafIconScale provides iconScale,
         LocalGrafIconBold provides iconBold
     ) {
-        Box(Modifier.fillMaxSize()) {
+        Box(
+            Modifier.fillMaxSize()
+                .background(if (dark) Color.Black else Color(0xFFF5F7FA))
+                .windowInsetsPadding(WindowInsets.systemBars)
+        ) {
             Box(
                 Modifier
                     .fillMaxSize()
