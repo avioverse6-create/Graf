@@ -147,6 +147,24 @@ private fun grafGlassRim() = PrismalSpecular.Default.copy(
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        // Persist uncaught startup/runtime exceptions so the next launch can show
+        // the exact stack trace instead of silently crashing again.
+        val crashPrefs = getSharedPreferences("graf_crash_diagnostics", MODE_PRIVATE)
+        val previousCrash = crashPrefs.getString("last_crash", null)
+        val previousHandler = Thread.getDefaultUncaughtExceptionHandler()
+        Thread.setDefaultUncaughtExceptionHandler { thread, error ->
+            runCatching {
+                val trace = java.io.StringWriter().also { writer ->
+                    error.printStackTrace(java.io.PrintWriter(writer))
+                }.toString()
+                crashPrefs.edit()
+                    .putString("last_crash", "Thread: ${thread.name}\\n\\n$trace")
+                    .commit()
+            }
+            previousHandler?.uncaughtException(thread, error)
+        }
+
         window.statusBarColor = android.graphics.Color.TRANSPARENT
         window.navigationBarColor = android.graphics.Color.TRANSPARENT
         if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
@@ -159,7 +177,44 @@ class MainActivity : ComponentActivity() {
             window.isStatusBarContrastEnforced = false
         }
         window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
-        setContent { GrafApp() }
+        setContent {
+            if (!previousCrash.isNullOrBlank()) {
+                GrafCrashReportScreen(
+                    report = previousCrash,
+                    onClear = {
+                        crashPrefs.edit().remove("last_crash").apply()
+                        recreate()
+                    }
+                )
+            } else {
+                GrafApp()
+            }
+        }
+    }
+}
+
+@Composable
+private fun GrafCrashReportScreen(report: String, onClear: () -> Unit) {
+    val scroll = rememberScrollState()
+    Column(
+        Modifier.fillMaxSize()
+            .background(Color(0xFF090A0D))
+            .verticalScroll(scroll)
+            .padding(20.dp),
+        verticalArrangement = Arrangement.spacedBy(14.dp)
+    ) {
+        Text("Graf · отчёт о сбое", color = Color.White, fontSize = 23.sp, fontWeight = FontWeight.Bold)
+        Text(
+            "Скопируй текст ошибки целиком и отправь его сюда. Это поможет найти настоящую причину вылета.",
+            color = Color(0xFFB7C0CF),
+            fontSize = 14.sp
+        )
+        androidx.compose.foundation.text.selection.SelectionContainer {
+            Text(report, color = Color(0xFFE6EAF0), fontSize = 11.sp)
+        }
+        androidx.compose.material.TextButton(onClick = onClear) {
+            Text("Очистить отчёт и перезапустить", color = Color(0xFF72AEFF))
+        }
     }
 }
 
