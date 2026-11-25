@@ -1011,13 +1011,25 @@ private fun ChannelScreen(dark: Boolean, foreground: Color, secondary: Color, on
 private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,iconScale:Float,iconBold:Boolean,onBack:()->Unit,onProfileClick:()->Unit,onScaleChange:(Float)->Unit,onBoldChange:(Boolean)->Unit,onIconScaleChange:(Float)->Unit,onIconBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
  val fill=if(dark) Color.White.copy(alpha=.10f) else Color.White.copy(alpha=.48f)
  val stroke=if(dark) Color.White.copy(alpha=.24f) else Color.White.copy(alpha=.78f)
- Column(Modifier.fillMaxSize().padding(horizontal=18.dp)) {
+ Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal=18.dp).padding(bottom=108.dp)) {
   Row(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
    GlassIconButton(Icons.Rounded.ArrowBack,dark,onBack)
    Spacer(Modifier.width(14.dp)); Text("Настройки",color=foreground,fontSize=20.sp,fontWeight=FontWeight.W900)
   }
   SettingsGroup("АККАУНТ",foreground,secondary,fill,stroke) {
    SettingsRow(Icons.Rounded.Person,"Мой профиль","Фото и информация профиля",foreground,secondary,onProfileClick)
+  }
+  Spacer(Modifier.height(14.dp))
+  SettingsGroup("ОФОРМЛЕНИЕ",foreground,secondary,fill,stroke) {
+   Row(Modifier.fillMaxWidth().clickable { onThemeChange(!dark) }.padding(horizontal=16.dp,vertical=10.dp), verticalAlignment=Alignment.CenterVertically) {
+    GrafIcon(if (dark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode, "Тема", foreground, 21.dp)
+    Spacer(Modifier.width(13.dp))
+    Column(Modifier.weight(1f)) {
+     Text("Светлая тема",color=foreground,fontSize=15.sp)
+     Text(if (dark) "Выключена" else "Включена",color=secondary,fontSize=12.sp)
+    }
+    androidx.compose.material.Switch(checked=!dark,onCheckedChange={ onThemeChange(!it) })
+   }
   }
   Spacer(Modifier.height(14.dp))
   SettingsGroup("ТЕКСТ И ШРИФТ",foreground,secondary,fill,stroke) {
@@ -1055,8 +1067,8 @@ private fun SettingsGroup(title:String,foreground:Color,secondary:Color,fill:Col
 }
 @Composable
 private fun SettingsRow(icon:ImageVector,title:String,subtitle:String,foreground:Color,secondary:Color,onClick:()->Unit) {
- Row(Modifier.fillMaxWidth().clickable(onClick=onClick).padding(horizontal=16.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically) {
-  GrafIcon(icon,title,foreground,21.dp); Spacer(Modifier.width(13.dp)); Column(Modifier.weight(1f)) { Text(title,color=foreground,fontSize=15.sp); Text(subtitle,color=secondary,fontSize=12.sp) }
+ Row(Modifier.fillMaxWidth().heightIn(min=64.dp).clickable(onClick=onClick).padding(horizontal=16.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically) {
+  GrafIcon(icon,title,foreground,21.dp); Spacer(Modifier.width(13.dp)); Column(Modifier.weight(1f)) { Text(title,color=foreground,fontSize=15.sp,maxLines=2,overflow=TextOverflow.Ellipsis); Text(subtitle,color=secondary,fontSize=12.sp,maxLines=2,overflow=TextOverflow.Ellipsis) }
   GrafIcon(Icons.Rounded.ArrowBack,null,secondary,16.dp)
  }
 }
