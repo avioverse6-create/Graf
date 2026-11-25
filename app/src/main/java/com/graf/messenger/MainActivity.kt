@@ -404,6 +404,8 @@ private fun RowScope.GrafBottomTab(index: Int, tab: GrafTab, selected: Int, dark
                     !measured.measure(
                         androidx.compose.ui.text.AnnotatedString(tab.title),
                         style = TextStyle(fontFamily = family, fontWeight = weight, fontSize = candidate.sp),
+                        softWrap = false,
+                        maxLines = 1,
                         constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxWidthPx)
                     ).didOverflowWidth
                 } ?: 6
