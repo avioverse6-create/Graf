@@ -138,10 +138,10 @@ private val Muted = Color(0xFF7D8493)
 private val Blue = Color(0xFF1688FF)
 private val LocalGrafIconScale = staticCompositionLocalOf { 1f }
 private val LocalGrafIconBold = staticCompositionLocalOf { false }
-private fun grafGlassRim(dark: Boolean) = PrismalSpecular.Default.copy(
-    width = 0.85.dp,
-    blurRadius = 0.55.dp,
-    style = PrismalSpecularStyle.Default(color = if (dark) Color.White.copy(alpha = 0.72f) else Color(0xFF64748B).copy(alpha = 0.38f))
+private fun grafGlassRim() = PrismalSpecular.Default.copy(
+    width = 1.dp,
+    blurRadius = 0.6.dp,
+    style = PrismalSpecularStyle.Default(color = Color.White.copy(alpha = 0.78f))
 )
 
 class MainActivity : ComponentActivity() {
@@ -158,13 +158,7 @@ class MainActivity : ComponentActivity() {
             window.isNavigationBarContrastEnforced = false
             window.isStatusBarContrastEnforced = false
         }
-        window.decorView.systemUiVisibility =
-            android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
-                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        window.decorView.systemUiVisibility = android.view.View.SYSTEM_UI_FLAG_VISIBLE
         setContent { GrafApp() }
     }
 }
@@ -211,13 +205,14 @@ private fun GrafApp() {
     val activity = context as? ComponentActivity
 
     SideEffect {
-        activity?.window?.decorView?.systemUiVisibility =
-            android.view.View.SYSTEM_UI_FLAG_LAYOUT_STABLE or
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN or
-                android.view.View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION or
-                android.view.View.SYSTEM_UI_FLAG_FULLSCREEN or
-                android.view.View.SYSTEM_UI_FLAG_HIDE_NAVIGATION or
-                android.view.View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+        activity?.window?.let { window ->
+            window.statusBarColor = if (dark) android.graphics.Color.BLACK else android.graphics.Color.rgb(245, 247, 250)
+            window.navigationBarColor = if (dark) android.graphics.Color.BLACK else android.graphics.Color.rgb(240, 243, 247)
+            window.decorView.systemUiVisibility = if (dark) android.view.View.SYSTEM_UI_FLAG_VISIBLE
+                else android.view.View.SYSTEM_UI_FLAG_VISIBLE or
+                    android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
+                    android.view.View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR
+        }
     }
 
     val fontPicker = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -263,9 +258,22 @@ private fun GrafApp() {
                     .prismalGlassLayer(backdrop)
                     .background(background)
             ) {
-                Column(Modifier.fillMaxSize().padding(top = 24.dp)) {
+                Column(Modifier.fillMaxSize()) {
+                    Row(
+                        Modifier.fillMaxWidth().padding(start = 22.dp, end = 18.dp, top = 8.dp, bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("Graf", color = foreground, fontSize = 29.sp, fontWeight = FontWeight.W900,
+                            maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f))
+                        GlasmioIconButton(
+                            onClick = { android.widget.Toast.makeText(context, "Создание чата пока недоступно", android.widget.Toast.LENGTH_SHORT).show() },
+                            size = 46.dp
+                        ) { GrafIcon(Icons.Rounded.Add, "Создать чат", foreground, 23.dp) }
+                    }
                     AnimatedContent(
                         targetState = selectedTab,
+                        modifier = Modifier.weight(1f).fillMaxWidth(),
                         transitionSpec = { fadeIn() togetherWith fadeOut() },
                         label = "graf-screen"
                     ) { tab ->
@@ -324,7 +332,7 @@ private fun GrafApp() {
                     backdrop = backdrop,
                     tabsCount = GrafTab.entries.size,
                     tintDropletContent = false,
-                    specular = { grafGlassRim(dark) },
+                    specular = { grafGlassRim() },
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 10.dp).fillMaxWidth()
                 ) {
                     GrafTab.entries.forEachIndexed { index, tab ->
@@ -381,7 +389,25 @@ private fun RowScope.GrafBottomTab(index: Int, tab: GrafTab, selected: Int, dark
         else Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
             GrafIcon(tab.icon, tab.title, tabTint, 22.dp)
         }
-        Text(tab.title, color = tabTint, fontSize = 11.sp)
+        BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+            val measured = androidx.compose.ui.text.rememberTextMeasurer()
+            val density = LocalDensity.current
+            val maxWidthPx = with(density) { maxWidth.roundToPx() }
+            val family = LocalTextStyle.current.fontFamily
+            val weight = LocalTextStyle.current.fontWeight
+            val fittedSize = remember(tab.title, maxWidthPx, family, weight, density.fontScale) {
+                (11 downTo 6).firstOrNull { candidate ->
+                    !measured.measure(
+                        androidx.compose.ui.text.AnnotatedString(tab.title),
+                        style = TextStyle(fontFamily = family, fontWeight = weight, fontSize = candidate.sp),
+                        constraints = androidx.compose.ui.unit.Constraints(maxWidth = maxWidthPx)
+                    ).didOverflowWidth
+                } ?: 6
+            }
+            Text(tab.title, color = tabTint, fontSize = fittedSize.sp, maxLines = 1,
+                softWrap = false, overflow = TextOverflow.Clip, textAlign = TextAlign.Center,
+                modifier = Modifier.fillMaxWidth())
+        }
     }
 }
 
@@ -769,12 +795,7 @@ private fun ChatsScreen(
                                 items(chats, key = { it.handle }) { chat ->
                                     val last = messagesByChat[chat.handle].orEmpty().lastOrNull()
                                     Row(
-                                        Modifier.fillMaxWidth().clickable {
-                                            activeChat = chat
-                                            draft = ""
-                                            replyingTo = null
-                                            pendingPhoto = null
-                                        }.padding(horizontal = 17.dp, vertical = 13.dp),
+                                        Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 13.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Box(
@@ -790,7 +811,7 @@ private fun ChatsScreen(
                                         }
                                         Spacer(Modifier.width(13.dp))
                                         Column(Modifier.weight(1f)) {
-                                            Text(chat.name, color = foreground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1)
+                                            Text(chat.name, color = foreground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             Text(last?.text?.ifBlank { "Фото" } ?: chat.preview, color = secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
                                         }
                                         Column(horizontalAlignment = Alignment.End) {
@@ -811,11 +832,7 @@ private fun ChatsScreen(
                             ) {
                                 items(contacts, key = { it.handle }) { contact ->
                                     Row(
-                                        Modifier.fillMaxWidth().clickable {
-                                            activeChat = contact
-                                            mode = "Chats"
-                                            draft = ""
-                                        }.padding(horizontal = 18.dp, vertical = 13.dp),
+                                        Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 13.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Box(Modifier.size(50.dp).clip(CircleShape).background(if (dark) Color(0xFF283642) else Color(0xFFE4EAF1)), contentAlignment = Alignment.Center) {
@@ -823,10 +840,10 @@ private fun ChatsScreen(
                                         }
                                         Spacer(Modifier.width(12.dp))
                                         Column(Modifier.weight(1f)) {
-                                            Text(contact.name, color = foreground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold)
-                                            Text(contact.preview, color = secondary, fontSize = 12.sp)
+                                            Text(contact.name, color = foreground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(contact.preview, color = secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                         }
-                                        Text("Написать", color = Color(0xFF8CCBFF), fontSize = 12.sp)
+                                        Text("Контакт", color = secondary, fontSize = 11.sp, maxLines = 1)
                                     }
                                 }
                             }
@@ -1063,7 +1080,7 @@ private fun SettingsGroup(title:String,foreground:Color,secondary:Color,fill:Col
 @Composable
 private fun SettingsRow(icon:ImageVector,title:String,subtitle:String,foreground:Color,secondary:Color,onClick:()->Unit) {
  Row(Modifier.fillMaxWidth().heightIn(min=64.dp).clickable(onClick=onClick).padding(horizontal=16.dp,vertical=13.dp),verticalAlignment=Alignment.CenterVertically) {
-  GrafIcon(icon,title,foreground,21.dp); Spacer(Modifier.width(13.dp)); Column(Modifier.weight(1f)) { Text(title,color=foreground,fontSize=15.sp,maxLines=2,overflow=TextOverflow.Ellipsis); Text(subtitle,color=secondary,fontSize=12.sp,maxLines=2,overflow=TextOverflow.Ellipsis) }
+  GrafIcon(icon,title,foreground,21.dp); Spacer(Modifier.width(13.dp)); Column(Modifier.weight(1f).widthIn(min = 0.dp)) { Text(title,color=foreground,fontSize=15.sp,maxLines=2,overflow=TextOverflow.Ellipsis, softWrap=true); Text(subtitle,color=secondary,fontSize=12.sp,maxLines=2,overflow=TextOverflow.Ellipsis, softWrap=true) }
   GrafIcon(Icons.Rounded.ArrowBack,null,secondary,16.dp)
  }
 }
