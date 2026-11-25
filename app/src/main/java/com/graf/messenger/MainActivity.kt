@@ -296,6 +296,17 @@ private fun GrafApp() {
             (if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
     }
 
+    GlasmioTheme(isDark = dark) {
+        GlasmioBackdropHost(
+            modifier = Modifier.fillMaxSize(),
+            sampledContent = {
+                Box(
+                    Modifier.fillMaxSize().background(
+                        if (dark) Color.Black else Color(0xFFF5F7FA)
+                    )
+                )
+            },
+            overlayContent = {
     CompositionLocalProvider(
         LocalConfiguration provides themedConfiguration,
         LocalDensity provides Density(density.density, (density.fontScale * textScale).coerceIn(.75f, 1.20f)),
@@ -325,12 +336,10 @@ private fun GrafApp() {
                         Text("Graf", color = foreground, fontSize = 29.sp, fontWeight = FontWeight.W900,
                             maxLines = 1, softWrap = false, overflow = TextOverflow.Ellipsis,
                             modifier = Modifier.weight(1f))
-                        GlasmioTheme(isDark = dark) {
-                            GlasmioIconButton(
-                                onClick = { android.widget.Toast.makeText(context, "Создание чата пока недоступно", android.widget.Toast.LENGTH_SHORT).show() },
-                                size = 46.dp
-                            ) { GrafIcon(Icons.Rounded.Add, "Создать чат", foreground, 23.dp) }
-                        }
+                        GlasmioIconButton(
+                            onClick = { android.widget.Toast.makeText(context, "Создание чата пока недоступно", android.widget.Toast.LENGTH_SHORT).show() },
+                            size = 46.dp
+                        ) { GrafIcon(Icons.Rounded.Add, "Создать чат", foreground, 23.dp) }
                     }
                     AnimatedContent(
                         targetState = selectedTab,
@@ -405,6 +414,8 @@ private fun GrafApp() {
                 }
             }
         }
+            }
+        )
     }
 }
 @Composable
