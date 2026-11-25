@@ -1004,8 +1004,8 @@ private fun ChannelScreen(dark: Boolean, foreground: Color, secondary: Color, on
 
 @Composable
 private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,iconScale:Float,iconBold:Boolean,onBack:()->Unit,onProfileClick:()->Unit,onScaleChange:(Float)->Unit,onThemeChange:(Boolean)->Unit,onBoldChange:(Boolean)->Unit,onIconScaleChange:(Float)->Unit,onIconBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
- val fill=if(dark) Color.White.copy(alpha=.10f) else Color.White.copy(alpha=.48f)
- val stroke=if(dark) Color.White.copy(alpha=.24f) else Color.White.copy(alpha=.78f)
+ val fill=if(dark) Color.White.copy(alpha=.10f) else Color(0xFFE9EDF3)
+ val stroke=if(dark) Color.White.copy(alpha=.24f) else Color(0xFFD5DCE6)
  Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal=18.dp).padding(bottom=108.dp)) {
   Row(Modifier.fillMaxWidth().padding(vertical=8.dp),verticalAlignment=Alignment.CenterVertically) {
    GlassIconButton(Icons.Rounded.ArrowBack,dark,onBack)
