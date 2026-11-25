@@ -175,9 +175,22 @@ private val GrafSettingsCogIcon: ImageVector by lazy {
         .build()
 }
 
+private val GrafChatBubblesIcon: ImageVector by lazy {
+    ImageVector.Builder(name = "GrafChatBubbles", defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 512f, viewportHeight = 512f).apply {
+        addPath(PathParser().parsePathString("M431 320.6c0-4.4 1.2-8.6 3.3-12.2.6-1.1 1.4-2.1 2.1-3.1 17.4-26 27.6-57.1 27.6-90.3.3-92.2-77.5-167-173.7-167-83.9 0-153.9 57.1-170.3 132.9-2.4 11.1-3.7 22.4-3.7 34.2 0 92.3 74.8 169.1 171 169.1 15.3 0 35.9-4.6 47.2-7.7 11.3-3.1 22.5-7.2 25.4-8.3 2.9-1.1 6.1-1.7 9.3-1.7 3.6 0 7 .7 10.1 2l56.7 20.1s2.4 1 3.9 1c4.4 0 8-3.5 8-8 0-1-.5-2.7-.5-2.7L431 320.6z").toNodes(), fill = SolidColor(Color.White))
+        addPath(PathParser().parsePathString("M318.5 392.5c-3.6 1-8.2 2.1-13.2 3.2-10.5 2.2-23.9 4.5-34 4.5-96.2 0-171-76.8-171-169.1 0-6.6.7-15 1.5-21.4.6-4.3 1.3-8.6 2.3-12.8 1-4.5 2.2-9 3.5-13.4l-8 7.1C66.8 219.2 48 260 48 302.5c0 29.3 8.5 57.5 24.8 82 2.3 3.5 3.6 6.2 3.2 8-.4 1.8-11.9 62-11.9 62-.6 2.9.5 5.8 2.7 7.7 1.5 1.2 3.3 1.8 5.1 1.8 1 0 2-.2 2.9-.6l56.1-22.1c1.8-.7 3.7-1.1 5.7-1.1 0 0 2.4-.2 6.3 1.3 18.9 7.4 39.8 12 60.7 12 46.6 0 90.4-20.1 120.1-55.1 0 0 3.2-4.4 6.9-9.6-3.7 1.3-7.9 2.6-12.1 3.7z").toNodes(), fill = SolidColor(Color.White))
+    }.build()
+}
+
+private val GrafContactsIcon: ImageVector by lazy {
+    ImageVector.Builder(name = "GrafContacts", defaultWidth = 24.dp, defaultHeight = 24.dp, viewportWidth = 24f, viewportHeight = 24f).apply {
+        addPath(PathParser().parsePathString("M18.685 19.097A9.723 9.723 0 0 0 21.75 12c0-5.385-4.365-9.75-9.75-9.75S2.25 6.615 2.25 12a9.723 9.723 0 0 0 3.065 7.097A9.716 9.716 0 0 0 12 21.75a9.716 9.716 0 0 0 6.685-2.653Zm-12.54-1.285A7.486 7.486 0 0 1 12 15a7.486 7.486 0 0 1 5.855 2.812A8.224 8.224 0 0 1 12 20.25a8.224 8.224 0 0 1-5.855-2.438ZM15.75 9a3.75 3.75 0 1 1-7.5 0 3.75 3.75 0 0 1 7.5 0Z").toNodes(), fill = SolidColor(Color.White))
+    }.build()
+}
+
 private enum class GrafTab(val title: String, val icon: ImageVector) {
-    Chats("Чаты", Icons.Rounded.Chat),
-    Contacts("Контакты", Icons.Rounded.Contacts),
+    Chats("Чаты", GrafChatBubblesIcon),
+    Contacts("Контакты", GrafContactsIcon),
     Settings("Настройки", Icons.Rounded.Settings),
     Profile("Профиль", Icons.Rounded.Person)
 }
@@ -236,7 +249,7 @@ private fun GrafApp() {
 
     CompositionLocalProvider(
         LocalConfiguration provides themedConfiguration,
-        LocalDensity provides Density(density.density, (density.fontScale * textScale).coerceIn(.75f, 1.5f)),
+        LocalDensity provides Density(density.density, (density.fontScale * textScale).coerceIn(.75f, 1.20f)),
         LocalTextStyle provides TextStyle(
             fontFamily = appFont,
             fontWeight = if (boldText) FontWeight.W900 else FontWeight.Normal
@@ -364,7 +377,9 @@ private fun RowScope.GrafBottomTab(index: Int, tab: GrafTab, selected: Int, dark
     PrismalGlassBottomTab(onClick = onClick) {
         val tabTint = if (active) Blue else if (dark) Color(0xFFE5ECF5) else Color(0xFF303744)
         if (tab == GrafTab.Settings) GrafSettingsCog(active, tabTint)
-        else GrafIcon(tab.icon, tab.title, tabTint, 22.dp)
+        else Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+            GrafIcon(tab.icon, tab.title, tabTint, 22.dp)
+        }
         Text(tab.title, color = tabTint, fontSize = 11.sp)
     }
 }
@@ -377,7 +392,7 @@ private fun GrafIcon(image: ImageVector, description: String?, tint: Color, size
         image,
         contentDescription = description,
         tint = tint,
-        modifier = Modifier.size(size * scale * if (bold) 1.035f else 1f)
+        modifier = Modifier.size(size * scale.coerceIn(.75f, 1.30f) * if (bold) 1.035f else 1f)
     )
 }
 
@@ -858,7 +873,7 @@ private fun ChatsScreen(
                                         GlasmioIconButton(onClick = open, size = 40.dp) { GrafIcon(Icons.Rounded.MoreHoriz, "Ещё", foreground, 21.dp) }
                                     }
                                 ) { menuBackdrop, close ->
-                                    GlasmioMenuItem(title = "Увеличить текст", systemName = "plus.magnifyingglass", backdrop = menuBackdrop, onClick = { onTextScaleChange((textScale + .05f).coerceAtMost(1.35f)); close() })
+                                    GlasmioMenuItem(title = "Увеличить текст", systemName = "plus.magnifyingglass", backdrop = menuBackdrop, onClick = { onTextScaleChange((textScale + .05f).coerceAtMost(1.20f)); close() })
                                     GlasmioMenuItem(title = "Уменьшить текст", systemName = "minus.magnifyingglass", backdrop = menuBackdrop, onClick = { onTextScaleChange((textScale - .05f).coerceAtLeast(.8f)); close() })
                                     GlasmioMenuItem(title = "Обычный размер", systemName = "textformat.size", backdrop = menuBackdrop, onClick = { onTextScaleChange(1f); close() })
                                 }
@@ -1008,7 +1023,7 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
   SettingsGroup("ТЕКСТ И ШРИФТ",foreground,secondary,fill,stroke) {
    Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp)) {
     Row(verticalAlignment=Alignment.CenterVertically) { GrafIcon(Icons.Rounded.FormatSize,"Размер",foreground,20.dp); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text("Размер текста",color=foreground,fontSize=15.sp); Text("${(textScale*100).toInt()}%",color=secondary,fontSize=12.sp) } }
-    androidx.compose.material.Slider(value=textScale,onValueChange=onScaleChange,valueRange=.8f..1.35f)
+    androidx.compose.material.Slider(value=textScale,onValueChange=onScaleChange,valueRange=.8f..1.20f)
    }
    SettingsRow(Icons.Rounded.FormatBold,"Жирный текст",if(boldText) "Включён" else "Выключен",foreground,secondary) { onBoldChange(!boldText) }
    SettingsRow(Icons.Rounded.CloudUpload,"Загрузить шрифт",if(hasCustomFont) "Свой TTF установлен" else "Выбрать файл .ttf",foreground,secondary,onFontPick)
@@ -1025,7 +1040,7 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
       Text("${(iconScale*100).toInt()}%",color=secondary,fontSize=12.sp)
      }
     }
-    androidx.compose.material.Slider(value=iconScale,onValueChange=onIconScaleChange,valueRange=.75f..1.55f)
+    androidx.compose.material.Slider(value=iconScale,onValueChange=onIconScaleChange,valueRange=.75f..1.30f)
    }
    SettingsRow(Icons.Rounded.FormatBold,"Жирные символы",if(iconBold) "Включено" else "Выключено",foreground,secondary) { onIconBoldChange(!iconBold) }
   }
