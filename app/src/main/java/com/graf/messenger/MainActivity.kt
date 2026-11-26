@@ -434,6 +434,66 @@ private fun GrafApp() {
         )
     }
 }
+
+@Composable
+private fun ChatWallpaperPattern(modifier: Modifier = Modifier, dark: Boolean) {
+    Canvas(modifier) {
+        val ink = (if (dark) Color(0xFFB9C9D8) else Color(0xFF64748B)).copy(alpha = if (dark) .105f else .13f)
+        val cell = 78.dp.toPx()
+        val stroke = androidx.compose.ui.graphics.drawscope.Stroke(width = 1.35.dp.toPx())
+        val columns = (size.width / cell).toInt() + 2
+        val rows = (size.height / cell).toInt() + 2
+        for (row in 0..rows) {
+            for (column in 0..columns) {
+                val x = column * cell + if (row % 2 == 0) 0f else cell * .43f
+                val y = row * cell
+                val variant = (row * 7 + column * 11) % 5
+                when (variant) {
+                    0 -> {
+                        drawCircle(ink, cell * .17f, Offset(x + cell * .34f, y + cell * .35f), style = stroke)
+                        drawCircle(ink, cell * .055f, Offset(x + cell * .29f, y + cell * .33f))
+                        drawCircle(ink, cell * .055f, Offset(x + cell * .39f, y + cell * .33f))
+                        drawArc(ink, 15f, 150f, false, Offset(x + cell * .23f, y + cell * .36f), androidx.compose.ui.geometry.Size(cell * .22f, cell * .17f), style = stroke)
+                    }
+                    1 -> {
+                        drawRoundRect(ink, Offset(x + cell * .17f, y + cell * .19f), androidx.compose.ui.geometry.Size(cell * .43f, cell * .30f), androidx.compose.ui.geometry.CornerRadius(cell * .09f), style = stroke)
+                        drawLine(ink, Offset(x + cell * .27f, y + cell * .29f), Offset(x + cell * .48f, y + cell * .29f), strokeWidth = stroke.width)
+                        drawLine(ink, Offset(x + cell * .27f, y + cell * .38f), Offset(x + cell * .43f, y + cell * .38f), strokeWidth = stroke.width)
+                    }
+                    2 -> {
+                        drawCircle(ink, cell * .19f, Offset(x + cell * .38f, y + cell * .38f), style = stroke)
+                        drawLine(ink, Offset(x + cell * .24f, y + cell * .25f), Offset(x + cell * .51f, y + cell * .51f), strokeWidth = stroke.width)
+                        drawLine(ink, Offset(x + cell * .51f, y + cell * .25f), Offset(x + cell * .24f, y + cell * .51f), strokeWidth = stroke.width)
+                    }
+                    3 -> {
+                        drawRoundRect(ink, Offset(x + cell * .19f, y + cell * .20f), androidx.compose.ui.geometry.Size(cell * .42f, cell * .28f), androidx.compose.ui.geometry.CornerRadius(cell * .14f), style = stroke)
+                        drawLine(ink, Offset(x + cell * .29f, y + cell * .48f), Offset(x + cell * .22f, y + cell * .59f), strokeWidth = stroke.width)
+                    }
+                    else -> {
+                        drawCircle(ink, cell * .13f, Offset(x + cell * .38f, y + cell * .37f), style = stroke)
+                        drawLine(ink, Offset(x + cell * .38f, y + cell * .17f), Offset(x + cell * .38f, y + cell * .08f), strokeWidth = stroke.width)
+                        drawLine(ink, Offset(x + cell * .18f, y + cell * .37f), Offset(x + cell * .09f, y + cell * .37f), strokeWidth = stroke.width)
+                        drawLine(ink, Offset(x + cell * .58f, y + cell * .37f), Offset(x + cell * .67f, y + cell * .37f), strokeWidth = stroke.width)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun GrafSmileVector(tint: Color) {
+    Canvas(Modifier.size(22.dp)) {
+        val w = size.width
+        val line = androidx.compose.ui.graphics.drawscope.Stroke(width = w * .085f, cap = StrokeCap.Round, join = StrokeJoin.Round)
+        drawCircle(tint, radius = w * .42f, center = Offset(w * .5f, w * .5f), style = line)
+        drawCircle(tint, radius = w * .045f, center = Offset(w * .36f, w * .40f))
+        drawCircle(tint, radius = w * .045f, center = Offset(w * .64f, w * .40f))
+        drawArc(tint, startAngle = 20f, sweepAngle = 140f, useCenter = false,
+            topLeft = Offset(w * .29f, w * .38f), size = androidx.compose.ui.geometry.Size(w * .42f, w * .38f), style = line)
+    }
+}
+
 @Composable
 private fun GrafSettingsCog(active: Boolean, tint: Color) {
     val progress = remember { Animatable(0f) }
