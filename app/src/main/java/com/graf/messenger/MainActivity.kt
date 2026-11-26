@@ -739,40 +739,18 @@ private fun ChatsScreen(
                     if (activeChat != null) {
                     val chat = activeChat!!
                     Column(Modifier.fillMaxSize()) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 7.dp),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(9.dp)
-                        ) {
-                            GlasmioIconButton(
-                                onClick = {
-                                    activeChat = null
-                                    selectedMessage = null
-                                    replyingTo = null
-                                    pendingPhoto = null
-                                },
-                                size = 48.dp
-                            ) {
-                                GrafIcon(Icons.Rounded.ArrowBack, "Назад", foreground, 24.dp)
-                            }
-                            GlassSurface(
-                                modifier = Modifier.weight(1f).height(54.dp),
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
-                            ) {
-                                Row(
-                                    Modifier.fillMaxSize().padding(horizontal = 13.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
-                                    Box(
-                                        Modifier.size(34.dp).clip(CircleShape).background(Color(0xFF2D5268)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            GlasmioIconButton(onClick = {
+                                activeChat = null
+                                selectedMessage = null
+                                replyingTo = null
+                                pendingPhoto = null
+                            }, size = 48.dp) { GrafIcon(Icons.Rounded.ArrowBack, "Назад", foreground, 24.dp) }
+                            GlassSurface(modifier = Modifier.weight(1f).height(54.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)) {
+                                Row(Modifier.fillMaxSize().padding(horizontal = 13.dp), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(Modifier.size(34.dp).clip(CircleShape).background(Color(0xFF2D5268)), contentAlignment = Alignment.Center) {
                                         Text(chat.name.take(1).uppercase(), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                                        if (chat.online) Box(
-                                            Modifier.align(Alignment.BottomEnd).size(9.dp).clip(CircleShape)
-                                                .background(Color(0xFF4DD58A))
-                                                .border(1.5.dp, if (dark) Color(0xFF17232D) else Color.White, CircleShape)
-                                        )
+                                        if (chat.online) Box(Modifier.align(Alignment.BottomEnd).size(9.dp).clip(CircleShape).background(Color(0xFF4DD58A)).border(1.5.dp, if (dark) Color(0xFF17232D) else Color.White, CircleShape))
                                     }
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
@@ -782,40 +760,22 @@ private fun ChatsScreen(
                                 }
                             }
                             GlasmioIconButton(onClick = {}, size = 48.dp) {
-                                Box(
-                                    Modifier.size(31.dp).clip(CircleShape).background(if (dark) Color(0xFF30343A) else Color(0xFFE1E6ED)),
-                                    contentAlignment = Alignment.Center
-                                ) {
+                                Box(Modifier.size(31.dp).clip(CircleShape).background(if (dark) Color(0xFF30343A) else Color(0xFFE1E6ED)), contentAlignment = Alignment.Center) {
                                     Text(chat.name.take(1).uppercase(), color = foreground, fontSize = 14.sp, fontWeight = FontWeight.Bold)
                                 }
                             }
                         }
-                        AnimatedVisibility(
-                            visible = addContactBannerVisible,
-                            enter = fadeIn(tween(160)) + androidx.compose.animation.expandVertically(),
-                            exit = fadeOut(tween(140)) + androidx.compose.animation.shrinkVertically()
-                        ) {
-                            GlassSurface(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 3.dp).height(54.dp),
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(27.dp)
-                            ) {
-                                Row(
-                                    Modifier.fillMaxSize().padding(start = 16.dp, end = 8.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                        AnimatedVisibility(visible = addContactBannerVisible, enter = fadeIn(tween(160)) + androidx.compose.animation.expandVertically(), exit = fadeOut(tween(140)) + androidx.compose.animation.shrinkVertically()) {
+                            GlassSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 3.dp).height(54.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(27.dp)) {
+                                Row(Modifier.fillMaxSize().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Text("Добавить в контакты", color = foreground, fontSize = 14.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                                    GlasmioIconButton(onClick = { addContactBannerVisible = false }, size = 38.dp) {
-                                        GrafIcon(Icons.Rounded.Close, "Закрыть", secondary, 21.dp)
-                                    }
+                                    GlasmioIconButton(onClick = { addContactBannerVisible = false }, size = 38.dp) { GrafIcon(Icons.Rounded.Close, "Закрыть", secondary, 21.dp) }
                                 }
                             }
                         }
                         Spacer(Modifier.weight(1f))
                         if (replyingTo != null || pendingPhoto != null || emojiPickerOpen) {
-                            GlassSurface(
-                                modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp),
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)
-                            ) {
+                            GlassSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)) {
                                 Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
                                     if (replyingTo != null) {
                                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -823,9 +783,7 @@ private fun ChatsScreen(
                                                 Text("Ответ для сообщения", color = Color(0xFF8CCBFF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                                 Text(replyingTo!!.text.ifBlank { "Фото" }, color = secondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             }
-                                            GlasmioIconButton(onClick = { replyingTo = null }, size = 30.dp) {
-                                                GrafIcon(Icons.Rounded.Close, "Отменить ответ", secondary, 16.dp)
-                                            }
+                                            GlasmioIconButton(onClick = { replyingTo = null }, size = 30.dp) { GrafIcon(Icons.Rounded.Close, "Отменить ответ", secondary, 16.dp) }
                                         }
                                     }
                                     if (pendingPhoto != null) {
@@ -833,75 +791,35 @@ private fun ChatsScreen(
                                             coil.compose.AsyncImage(model = pendingPhoto, contentDescription = "Выбранное фото", contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.size(48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(9.dp)))
                                             Spacer(Modifier.width(8.dp))
                                             Text("Фото готово к отправке", color = secondary, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                                            GlasmioIconButton(onClick = { pendingPhoto = null }, size = 30.dp) {
-                                                GrafIcon(Icons.Rounded.Close, "Убрать фото", secondary, 16.dp)
-                                            }
+                                            GlasmioIconButton(onClick = { pendingPhoto = null }, size = 30.dp) { GrafIcon(Icons.Rounded.Close, "Убрать фото", secondary, 16.dp) }
                                         }
                                     }
                                     if (emojiPickerOpen) {
                                         Row(Modifier.fillMaxWidth().padding(top = 5.dp), horizontalArrangement = Arrangement.SpaceEvenly) {
-                                            listOf("😀", "😂", "🥰", "❤️", "🔥", "👍", "✨", "🙏").forEach { emoji ->
-                                                Text(emoji, modifier = Modifier.clickable { draft += emoji }.padding(5.dp), fontSize = 20.sp)
-                                            }
+                                            listOf("😀", "😂", "🥰", "❤️", "🔥", "👍", "✨", "🙏").forEach { emoji -> Text(emoji, modifier = Modifier.clickable { draft += emoji }.padding(5.dp), fontSize = 20.sp) }
                                         }
                                     }
                                 }
                             }
                         }
-                        Row(
-                            Modifier.fillMaxWidth().padding(start = 17.dp, end = 17.dp, bottom = 8.dp).imePadding(),
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(9.dp)
-                        ) {
-                            GlasmioIconButton(
-                                onClick = { imagePicker.launch(arrayOf("image/*")) },
-                                size = 48.dp
-                            ) {
+                        Row(Modifier.fillMaxWidth().padding(start = 17.dp, end = 17.dp, bottom = 8.dp).imePadding(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            GlasmioIconButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, size = 48.dp) {
                                 GrafIcon(Icons.Rounded.AddPhotoAlternate, "Прикрепить", foreground, 23.dp)
                             }
-                            GlassSurface(
-                                modifier = Modifier.weight(1f).defaultMinSize(minHeight = 52.dp),
-                                shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)
-                            ) {
-                                Row(
-                                    Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 7.dp, top = 6.dp, bottom = 6.dp),
-                                    verticalAlignment = Alignment.CenterVertically
-                                ) {
+                            GlassSurface(modifier = Modifier.weight(1f).defaultMinSize(minHeight = 52.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)) {
+                                Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 7.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                                         if (draft.isEmpty()) Text("Сообщение", color = secondary, fontSize = 14.sp, maxLines = 1)
-                                        BasicTextField(
-                                            value = draft,
-                                            onValueChange = { draft = it },
-                                            modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp, max = 100.dp),
-                                            textStyle = TextStyle(
-                                                color = foreground,
-                                                fontSize = 14.sp,
-                                                fontFamily = LocalTextStyle.current.fontFamily,
-                                                fontWeight = LocalTextStyle.current.fontWeight,
-                                                lineHeight = 19.sp
-                                            ),
-                                            maxLines = 4,
-                                            cursorBrush = SolidColor(Color(0xFF8CCBFF))
-                                        )
+                                        BasicTextField(value = draft, onValueChange = { draft = it }, modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp, max = 100.dp), textStyle = TextStyle(color = foreground, fontSize = 14.sp, fontFamily = LocalTextStyle.current.fontFamily, fontWeight = LocalTextStyle.current.fontWeight, lineHeight = 19.sp), maxLines = 4, cursorBrush = SolidColor(Color(0xFF8CCBFF)))
                                     }
-                                    GlasmioIconButton(onClick = { emojiPickerOpen = !emojiPickerOpen }, size = 38.dp) {
-                                        Text("☺", color = foreground, fontSize = 23.sp)
-                                    }
+                                    GlasmioIconButton(onClick = { emojiPickerOpen = !emojiPickerOpen }, size = 38.dp) { Text("☺", color = foreground, fontSize = 23.sp) }
                                 }
                             }
-                            GlasmioIconButton(
-                                onClick = {
-                                    if (draft.isNotBlank() || pendingPhoto != null) sendMessage(chat)
-                                    else android.widget.Toast.makeText(context, "Демо-микрофон", android.widget.Toast.LENGTH_SHORT).show()
-                                },
-                                size = 48.dp
-                            ) {
-                                GrafIcon(
-                                    if (draft.isNotBlank() || pendingPhoto != null) Icons.Rounded.Send else Icons.Rounded.Mic,
-                                    if (draft.isNotBlank() || pendingPhoto != null) "Отправить" else "Микрофон",
-                                    foreground,
-                                    23.dp
-                                )
+                            GlasmioIconButton(onClick = {
+                                if (draft.isNotBlank() || pendingPhoto != null) sendMessage(chat)
+                                else android.widget.Toast.makeText(context, "Демо-микрофон", android.widget.Toast.LENGTH_SHORT).show()
+                            }, size = 48.dp) {
+                                GrafIcon(if (draft.isNotBlank() || pendingPhoto != null) Icons.Rounded.Send else Icons.Rounded.Mic, if (draft.isNotBlank() || pendingPhoto != null) "Отправить" else "Микрофон", foreground, 23.dp)
                             }
                         }
                     }
