@@ -115,6 +115,8 @@ import androidx.compose.material.icons.rounded.Mic
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.VolumeOff
 import io.github.neoruaa.glasmio.core.GlasmioTheme
+import io.github.neoruaa.glasmio.core.GlassAppearance
+import io.github.neoruaa.glasmio.ui.GlasmioSwitch
 import io.github.neoruaa.glasmio.glass.GlassEmphasis
 import io.github.neoruaa.glasmio.glass.GlasmioBackdropHost
 import io.github.neoruaa.glasmio.glass.GlassSurface
@@ -254,6 +256,9 @@ private fun GrafApp() {
     var bottomBarVisible by remember { mutableStateOf(true) }
     var customFontPath by remember { mutableStateOf(prefs.getString("font_path", null)) }
     var textScale by remember { mutableFloatStateOf(prefs.getFloat("text_scale", 1f)) }
+    var interfaceScale by remember { mutableFloatStateOf(prefs.getFloat("interface_scale", 1f)) }
+    var liquidGlass by remember { mutableStateOf(prefs.getBoolean("liquid_glass", true)) }
+    var chatScreenOpen by remember { mutableStateOf(false) }
     var boldText by remember { mutableStateOf(prefs.getBoolean("bold_text", true)) }
     var iconScale by remember { mutableFloatStateOf(prefs.getFloat("icon_scale", 1f)) }
     var iconBold by remember { mutableStateOf(prefs.getBoolean("icon_bold", false)) }
@@ -263,7 +268,8 @@ private fun GrafApp() {
     SideEffect {
         activity?.window?.let { window ->
             window.statusBarColor = if (dark) android.graphics.Color.BLACK else android.graphics.Color.rgb(245, 247, 250)
-            window.navigationBarColor = if (dark) android.graphics.Color.BLACK else android.graphics.Color.rgb(240, 243, 247)
+            window.navigationBarColor = android.graphics.Color.TRANSPARENT
+            if (android.os.Build.VERSION.SDK_INT >= 29) window.isNavigationBarContrastEnforced = false
             window.decorView.systemUiVisibility = if (dark) android.view.View.SYSTEM_UI_FLAG_VISIBLE
                 else android.view.View.SYSTEM_UI_FLAG_VISIBLE or
                     android.view.View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR or
@@ -297,7 +303,7 @@ private fun GrafApp() {
             (if (dark) Configuration.UI_MODE_NIGHT_YES else Configuration.UI_MODE_NIGHT_NO)
     }
 
-    GlasmioTheme(isDark = dark) {
+    GlasmioTheme(isDark = dark, appearance = GlassAppearance(liquidGlassEnabled = liquidGlass, reduceTransparency = !liquidGlass)) {
         GlasmioBackdropHost(
             modifier = Modifier.fillMaxSize(),
             sampledContent = {
@@ -310,7 +316,7 @@ private fun GrafApp() {
             overlayContent = {
     CompositionLocalProvider(
         LocalConfiguration provides themedConfiguration,
-        LocalDensity provides Density(density.density, (density.fontScale * textScale).coerceIn(.75f, 1.20f)),
+        LocalDensity provides Density((density.density * interfaceScale).coerceIn(density.density * .82f, density.density * 1.18f), (density.fontScale * textScale).coerceIn(.75f, 1.20f)),
         LocalTextStyle provides TextStyle(
             fontFamily = appFont,
             fontWeight = if (boldText) FontWeight.W900 else FontWeight.Normal
@@ -330,7 +336,7 @@ private fun GrafApp() {
                     .background(background)
             ) {
                 Column(Modifier.fillMaxSize()) {
-                    if (selectedTab == 0) {
+                    if (selectedTab == 0 && !chatScreenOpen) {
                         Row(
                             Modifier.fillMaxWidth().padding(start = 22.dp, end = 18.dp, top = 8.dp, bottom = 8.dp),
                             verticalAlignment = Alignment.CenterVertically
@@ -355,19 +361,25 @@ private fun GrafApp() {
                                 dark, foreground, secondary, textScale,
                                 { textScale = it; prefs.edit().putFloat("text_scale", it).apply() },
                                 { bottomBarVisible = it },
+                                liquidGlass,
+                                { chatScreenOpen = it },
                                 initialMode = "Chats"
                             )
                             GrafTab.Contacts -> ChatsScreen(
                                 dark, foreground, secondary, textScale,
                                 { textScale = it; prefs.edit().putFloat("text_scale", it).apply() },
                                 { bottomBarVisible = it },
+                                liquidGlass,
+                                { chatScreenOpen = it },
                                 initialMode = "Contacts"
                             )
                             GrafTab.Settings -> SettingsScreen(
-                                dark, foreground, secondary, textScale, boldText, iconScale, iconBold,
+                                dark, foreground, secondary, textScale, interfaceScale, liquidGlass, boldText, iconScale, iconBold,
                                 onBack = { selectedTab = 0 },
                                 onProfileClick = { selectedTab = 3 },
                                 onScaleChange = { textScale = it; prefs.edit().putFloat("text_scale", it).apply() },
+                                onInterfaceScaleChange = { interfaceScale = it; prefs.edit().putFloat("interface_scale", it).apply() },
+                                onLiquidGlassChange = { liquidGlass = it; prefs.edit().putBoolean("liquid_glass", it).apply() },
                                 onThemeChange = { dark = it; prefs.edit().putBoolean("dark_theme", it).apply() },
                                 onBoldChange = { boldText = it; prefs.edit().putBoolean("bold_text", it).apply() },
                                 onIconScaleChange = { iconScale = it; prefs.edit().putFloat("icon_scale", it).apply() },
@@ -616,6 +628,8 @@ private fun ChatsScreen(
     textScale: Float,
     onTextScaleChange: (Float) -> Unit,
     onScrollChrome: (Boolean) -> Unit,
+    liquidGlass: Boolean,
+    onChatVisibility: (Boolean) -> Unit,
     initialMode: String = "Chats",
 ) {
     data class Chat(val name: String, val handle: String, val preview: String, val time: String, val unread: Int, val online: Boolean)
@@ -677,6 +691,7 @@ private fun ChatsScreen(
     }
     LaunchedEffect(activeChat) {
         onScrollChrome(activeChat == null)
+        onChatVisibility(activeChat != null)
         if (activeChat != null) {
             kotlinx.coroutines.yield()
             val count = messagesByChat[activeChat!!.handle].orEmpty().size
@@ -731,21 +746,14 @@ private fun ChatsScreen(
         }
     }
 
-    GlasmioTheme(isDark = dark) {
+    GlasmioTheme(isDark = dark, appearance = GlassAppearance(liquidGlassEnabled = liquidGlass, reduceTransparency = !liquidGlass)) {
         GlasmioBackdropHost(
             modifier = Modifier.fillMaxSize(),
             sampledContent = {
                 Box(Modifier.fillMaxSize()) {
                     if (activeChat != null) {
-                        // Telegram Android's MotionBackgroundDrawable default four-colour palette.
-                        // Telegram renders these generated gradient wallpapers rather than relying on a fixed bitmap.
-                        if (dark) {
-                            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF426D57), Color(0xFFF7E48B), Color(0xFF87A284), Color(0xFFFDF6CA)))))
-                            Box(Modifier.fillMaxSize().background(Color(0xFF071018).copy(alpha = .82f)))
-                        } else {
-                            Box(Modifier.fillMaxSize().background(Color(0xFFE7EDF4)))
-                            Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = .70f)))
-                        }
+                        Box(Modifier.fillMaxSize().background(if (dark) Color(0xFF080B0F) else Color(0xFFF0F3F7)))
+                        ChatWallpaperPattern(Modifier.fillMaxSize(), dark)
                         val chat = activeChat!!
                         val messages = messagesByChat[chat.handle].orEmpty()
                         LazyColumn(
@@ -954,7 +962,7 @@ private fun ChatsScreen(
                                 selectedMessage = null
                                 replyingTo = null
                                 pendingPhoto = null
-                            }, size = 48.dp) { GrafIcon(Icons.Rounded.ArrowBack, "Назад", foreground, 24.dp) }
+                            }, size = 48.dp) { GrafIcon(Icons.Rounded.ChevronLeft, "Назад", foreground, 28.dp) }
                             GlassSurface(modifier = Modifier.weight(1f).height(54.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)) {
                                 Row(Modifier.fillMaxSize().padding(horizontal = 13.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Box(Modifier.size(34.dp).clip(CircleShape).background(Color(0xFF2D5268)), contentAlignment = Alignment.Center) {
@@ -1021,7 +1029,7 @@ private fun ChatsScreen(
                                         if (draft.isEmpty()) Text("Сообщение", color = secondary, fontSize = 14.sp, maxLines = 1)
                                         BasicTextField(value = draft, onValueChange = { draft = it }, modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp, max = 100.dp), textStyle = TextStyle(color = foreground, fontSize = 14.sp, fontFamily = LocalTextStyle.current.fontFamily, fontWeight = LocalTextStyle.current.fontWeight, lineHeight = 19.sp), maxLines = 4, cursorBrush = SolidColor(Color(0xFF8CCBFF)))
                                     }
-                                    GlasmioIconButton(onClick = { emojiPickerOpen = !emojiPickerOpen }, size = 38.dp) { Text("☺", color = foreground, fontSize = 23.sp) }
+                                    GlasmioIconButton(onClick = { emojiPickerOpen = !emojiPickerOpen }, size = 38.dp) { GrafSmileVector(foreground) }
                                 }
                             }
                             GlasmioIconButton(onClick = {
@@ -1092,7 +1100,7 @@ private fun ChannelScreen(dark: Boolean, foreground: Color, secondary: Color, on
 }
 
 @Composable
-private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,boldText:Boolean,iconScale:Float,iconBold:Boolean,onBack:()->Unit,onProfileClick:()->Unit,onScaleChange:(Float)->Unit,onThemeChange:(Boolean)->Unit,onBoldChange:(Boolean)->Unit,onIconScaleChange:(Float)->Unit,onIconBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
+private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textScale:Float,interfaceScale:Float,liquidGlass:Boolean,boldText:Boolean,iconScale:Float,iconBold:Boolean,onBack:()->Unit,onProfileClick:()->Unit,onScaleChange:(Float)->Unit,onInterfaceScaleChange:(Float)->Unit,onLiquidGlassChange:(Boolean)->Unit,onThemeChange:(Boolean)->Unit,onBoldChange:(Boolean)->Unit,onIconScaleChange:(Float)->Unit,onIconBoldChange:(Boolean)->Unit,onFontPick:()->Unit,onFontReset:()->Unit,hasCustomFont:Boolean) {
  val fill=if(dark) Color.White.copy(alpha=.10f) else Color(0xFFE9EDF3)
  val stroke=if(dark) Color.White.copy(alpha=.24f) else Color(0xFFD5DCE6)
  Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal=18.dp).padding(bottom=108.dp)) {
@@ -1105,6 +1113,9 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
   }
   Spacer(Modifier.height(14.dp))
   SettingsGroup("ОФОРМЛЕНИЕ",foreground,secondary,fill,stroke) {
+   Row(Modifier.fillMaxWidth().clickable { onLiquidGlassChange(!liquidGlass) }.padding(horizontal=16.dp,vertical=10.dp), verticalAlignment=Alignment.CenterVertically) {
+    GrafIcon(Icons.Rounded.Tune,"Жидкое стекло",foreground,21.dp); Spacer(Modifier.width(13.dp)); Column(Modifier.weight(1f)) { Text("Жидкое стекло",color=foreground,fontSize=15.sp); Text(if(liquidGlass) "Включено" else "Выключено · контуры и анимации остаются",color=secondary,fontSize=12.sp) }; GlasmioSwitch(checked=liquidGlass,onCheckedChange=onLiquidGlassChange)
+   }
    Row(Modifier.fillMaxWidth().clickable { onThemeChange(!dark) }.padding(horizontal=16.dp,vertical=10.dp), verticalAlignment=Alignment.CenterVertically) {
     GrafIcon(if (dark) Icons.Rounded.LightMode else Icons.Rounded.DarkMode, "Тема", foreground, 21.dp)
     Spacer(Modifier.width(13.dp))
@@ -1112,7 +1123,14 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
      Text("Светлая тема",color=foreground,fontSize=15.sp)
      Text(if (dark) "Выключена" else "Включена",color=secondary,fontSize=12.sp)
     }
-    androidx.compose.material.Switch(checked=!dark,onCheckedChange={ onThemeChange(!it) })
+    GlasmioSwitch(checked=!dark,onCheckedChange={ onThemeChange(!it) })
+   }
+  }
+  Spacer(Modifier.height(14.dp))
+  SettingsGroup("МАСШТАБ ИНТЕРФЕЙСА",foreground,secondary,fill,stroke) {
+   Column(Modifier.fillMaxWidth().padding(horizontal=16.dp,vertical=10.dp)) {
+    Row(verticalAlignment=Alignment.CenterVertically) { GrafIcon(Icons.Rounded.FormatSize,"Масштаб интерфейса",foreground,20.dp); Spacer(Modifier.width(12.dp)); Column(Modifier.weight(1f)) { Text("Размер элементов",color=foreground,fontSize=15.sp); Text("${(interfaceScale*100).toInt()}%",color=secondary,fontSize=12.sp) } }
+    androidx.compose.material.Slider(value=interfaceScale,onValueChange=onInterfaceScaleChange,valueRange=.85f..1.15f)
    }
   }
   Spacer(Modifier.height(14.dp))
@@ -1147,7 +1165,7 @@ private fun SettingsScreen(dark:Boolean,foreground:Color,secondary:Color,textSca
 @Composable
 private fun SettingsGroup(title:String,foreground:Color,secondary:Color,fill:Color,stroke:Color,content:@Composable ColumnScope.()->Unit) {
  Column(Modifier.fillMaxWidth()) { Text(title,color=secondary,fontSize=11.sp,letterSpacing=1.3.sp,modifier=Modifier.padding(start=12.dp,bottom=7.dp))
-  Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(25.dp)).background(fill).border(1.dp,stroke,androidx.compose.foundation.shape.RoundedCornerShape(25.dp)),content=content) }
+  Column(Modifier.fillMaxWidth().clip(androidx.compose.foundation.shape.RoundedCornerShape(25.dp)).background(fill),content=content) }
 }
 @Composable
 private fun SettingsRow(icon:ImageVector,title:String,subtitle:String,foreground:Color,secondary:Color,onClick:()->Unit) {
