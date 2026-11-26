@@ -882,7 +882,10 @@ private fun ChatsScreen(
                                 items(chats, key = { it.handle }) { chat ->
                                     val last = messagesByChat[chat.handle].orEmpty().lastOrNull()
                                     Row(
-                                        Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 13.dp),
+                                        Modifier.fillMaxWidth().clickable {
+                                            activeChat = chat
+                                            addContactBannerVisible = true
+                                        }.padding(horizontal = 17.dp, vertical = 13.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Box(
@@ -919,7 +922,10 @@ private fun ChatsScreen(
                             ) {
                                 items(contacts, key = { it.handle }) { contact ->
                                     Row(
-                                        Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 13.dp),
+                                        Modifier.fillMaxWidth().clickable {
+                                            activeChat = Chat(contact.name, contact.handle, contact.preview, contact.time, 0, contact.online)
+                                            addContactBannerVisible = true
+                                        }.padding(horizontal = 18.dp, vertical = 13.dp),
                                         verticalAlignment = Alignment.CenterVertically
                                     ) {
                                         Box(Modifier.size(50.dp).clip(CircleShape).background(if (dark) Color(0xFF283642) else Color(0xFFE4EAF1)), contentAlignment = Alignment.Center) {
