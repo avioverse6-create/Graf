@@ -1133,8 +1133,6 @@ private fun ChatsScreen(
                             }
                         }
                     }
-                }
-            }
             }
         }
     }
