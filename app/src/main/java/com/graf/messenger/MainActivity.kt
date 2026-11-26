@@ -18,6 +18,10 @@ import androidx.compose.material.icons.rounded.Circle
 
 import android.graphics.BitmapFactory
 import android.media.MediaPlayer
+import android.media.AudioManager
+import android.media.ToneGenerator
+import android.os.Handler
+import android.os.Looper
 import android.provider.OpenableColumns
 import androidx.compose.ui.geometry.Offset
 import android.net.Uri
@@ -63,6 +67,8 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.Icon
+import androidx.compose.material.DropdownMenu
+import androidx.compose.material.DropdownMenuItem
 import androidx.compose.material.LocalTextStyle
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
@@ -95,6 +101,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.StrokeJoin
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -112,6 +119,7 @@ import androidx.compose.material.icons.rounded.ChatBubbleOutline
 import androidx.compose.material.icons.rounded.Send
 import androidx.compose.material.icons.rounded.AddPhotoAlternate
 import androidx.compose.material.icons.rounded.Mic
+import androidx.compose.material.icons.rounded.Videocam
 import androidx.compose.material.icons.rounded.NotificationsOff
 import androidx.compose.material.icons.rounded.VolumeOff
 import io.github.neoruaa.glasmio.core.GlasmioTheme
@@ -719,6 +727,7 @@ private fun ChatsScreen(
     var emojiPickerOpen by remember { mutableStateOf(false) }
     var addContactBannerVisible by remember { mutableStateOf(true) }
     var reactions by remember { mutableStateOf(mapOf<Long, String>()) }
+    val chatPrismalBackdrop = rememberPrismalGlassLayer()
     val context = LocalContext.current
     val seedMessages = remember {
         mapOf(
@@ -787,6 +796,7 @@ private fun ChatsScreen(
             replyTo = replyingTo?.text,
             photoUri = photo
         )
+        playGrafMessageTone(incoming = false)
         messagesByChat = messagesByChat + (chat.handle to (messagesByChat[chat.handle].orEmpty() + sent))
         draft = ""
         replyingTo = null
@@ -801,25 +811,29 @@ private fun ChatsScreen(
                 "@design_room" -> listOf("Спасибо за фидбек ✨", "Классная мысль!", "Обсудим чуть позже.").random()
                 else -> listOf("Хорошо 😊", "Договорились!", "Сейчас отвечу подробнее.").random()
             }
+            playGrafMessageTone(incoming = true)
             val incoming = GrafDemoMessage(System.currentTimeMillis(), answer, false, clockNow())
             messagesByChat = messagesByChat + (chat.handle to (messagesByChat[chat.handle].orEmpty() + incoming))
         }
     }
 
-    GlasmioTheme(isDark = dark, appearance = GlassAppearance(liquidGlassEnabled = liquidGlass, reduceTransparency = !liquidGlass)) {
-        GlasmioBackdropHost(
-            modifier = Modifier.fillMaxSize(),
-            sampledContent = {
-                Box(Modifier.fillMaxSize()) {
+    Box(Modifier.fillMaxSize()) {
+        Box(Modifier.fillMaxSize().prismalGlassLayer(chatPrismalBackdrop)) {
                     if (activeChat != null) {
                         Box(Modifier.fillMaxSize().background(if (dark) Color(0xFF080B0F) else Color(0xFFF0F3F7)))
-                        ChatWallpaperPattern(Modifier.fillMaxSize(), dark)
+                        Image(
+                            painter = painterResource(R.drawable.graf_chat_wallpaper),
+                            contentDescription = null,
+                            contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().graphicsLayer { alpha = if (dark) 0.34f else 0.16f }
+                        )
+                        Box(Modifier.fillMaxSize().background(if (dark) Color.Black.copy(alpha = 0.54f) else Color.White.copy(alpha = 0.28f)))
                         val chat = activeChat!!
                         val messages = messagesByChat[chat.handle].orEmpty()
                         LazyColumn(
                             state = messageListState,
                             modifier = Modifier.fillMaxSize(),
-                            contentPadding = PaddingValues(start = 13.dp, end = 13.dp, top = 82.dp, bottom = 126.dp),
+                            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 76.dp, bottom = 116.dp),
                             verticalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             items(messages, key = { it.id }) { message ->
@@ -894,45 +908,19 @@ private fun ChatsScreen(
                                                 Text(reaction, fontSize = 13.sp, modifier = Modifier.padding(top = 3.dp))
                                             }
                                         }
-                                        GlasmioContextMenu(
-                                            visible = selectedMessage?.id == message.id,
-                                            itemCount = 4,
-                                            menuWidth = 236.dp,
-                                            opensAbove = true
-                                        ) { menuBackdrop ->
-                                            GlasmioMenuItem(
-                                                title = "Ответить",
-                                                systemName = "arrowshape.turn.up.left",
-                                                backdrop = menuBackdrop,
-                                                onClick = { replyingTo = message; selectedMessage = null }
-                                            )
-                                            GlasmioMenuItem(
-                                                title = "Копировать",
-                                                systemName = "doc.on.doc",
-                                                backdrop = menuBackdrop,
-                                                onClick = {
-                                                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Graf", message.text))
-                                                    selectedMessage = null
-                                                }
-                                            )
-                                            GlasmioMenuItem(
-                                                title = "Поставить ❤️",
-                                                systemName = "heart",
-                                                backdrop = menuBackdrop,
-                                                onClick = { reactions = reactions + (message.id to "❤️"); selectedMessage = null }
-                                            )
-                                            GlasmioMenuItem(
-                                                title = "Удалить у меня",
-                                                systemName = "trash",
-                                                destructive = true,
-                                                backdrop = menuBackdrop,
-                                                onClick = {
-                                                    messagesByChat = messagesByChat + (chat.handle to messagesByChat[chat.handle].orEmpty().filterNot { it.id == message.id })
-                                                    selectedMessage = null
-                                                }
-                                            )
-                                        }
+                                        DropdownMenu(expanded = selectedMessage?.id == message.id, onDismissRequest = { selectedMessage = null }) {
+                                        DropdownMenuItem(onClick = { replyingTo = message; selectedMessage = null }) { Text("Ответить") }
+                                        DropdownMenuItem(onClick = {
+                                            val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                            clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Graf", message.text))
+                                            selectedMessage = null
+                                        }) { Text("Копировать") }
+                                        DropdownMenuItem(onClick = { reactions = reactions + (message.id to "❤️"); selectedMessage = null }) { Text("Поставить ❤️") }
+                                        DropdownMenuItem(onClick = {
+                                            messagesByChat = messagesByChat + (chat.handle to messagesByChat[chat.handle].orEmpty().filterNot { it.id == message.id })
+                                            selectedMessage = null
+                                        }) { Text("Удалить у меня") }
+                                    }
                                     }
                                 }
                                 }
@@ -951,6 +939,8 @@ private fun ChatsScreen(
                                     val last = messagesByChat[chat.handle].orEmpty().lastOrNull()
                                     Row(
                                         Modifier.fillMaxWidth().clickable {
+                                            onChatVisibility(true)
+                                            onScrollChrome(false)
                                             activeChat = chat
                                             addContactBannerVisible = true
                                         }.padding(horizontal = 17.dp, vertical = 13.dp),
@@ -991,6 +981,8 @@ private fun ChatsScreen(
                                 items(contacts, key = { it.handle }) { contact ->
                                     Row(
                                         Modifier.fillMaxWidth().clickable {
+                                            onChatVisibility(true)
+                                            onScrollChrome(false)
                                             activeChat = Chat(contact.name, contact.handle, contact.preview, contact.time, 0, contact.online)
                                             addContactBannerVisible = true
                                         }.padding(horizontal = 18.dp, vertical = 13.dp),
@@ -1011,23 +1003,26 @@ private fun ChatsScreen(
                         }
                     }
                 }
-            },
-            overlayContent = {
-                if (activeChat != null) {
+        }
+        if (activeChat != null) {
                     val chat = activeChat!!
                     Column(Modifier.fillMaxSize()) {
-                        Row(Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                            GlasmioIconButton(onClick = {
+                        Row(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
+                            PrismalGlassButton(onClick = {
+                                onChatVisibility(false)
+                                onScrollChrome(true)
                                 activeChat = null
                                 selectedMessage = null
                                 replyingTo = null
                                 pendingPhoto = null
-                            }, size = 48.dp) { GrafIcon(Icons.Rounded.ChevronLeft, "Назад", foreground, 28.dp) }
-                            GlassSurface(modifier = Modifier.weight(1f).height(54.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)) {
-                                Row(Modifier.fillMaxSize().padding(horizontal = 13.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Box(Modifier.size(34.dp).clip(CircleShape).background(Color(0xFF2D5268)), contentAlignment = Alignment.Center) {
-                                        Text(chat.name.take(1).uppercase(), color = Color.White, fontSize = 15.sp, fontWeight = FontWeight.Bold)
-                                        if (chat.online) Box(Modifier.align(Alignment.BottomEnd).size(9.dp).clip(CircleShape).background(Color(0xFF4DD58A)).border(1.5.dp, if (dark) Color(0xFF17232D) else Color.White, CircleShape))
+                            }, backdrop = chatPrismalBackdrop, modifier = Modifier.size(46.dp), height = null, shape = { CircleShape }, tint = Color.White, tintAlpha = 0.055f, blurRadius = 13.dp, refractionHeight = 9.dp, refractionAmount = 15.dp, specular = { grafGlassRim() }, contentPadding = PaddingValues(0.dp), horizontalArrangement = Arrangement.Center) {
+                                GrafIcon(Icons.Rounded.ChevronLeft, "Назад", foreground, 27.dp)
+                            }
+                            PrismalGlassButton(onClick = {}, backdrop = chatPrismalBackdrop, modifier = Modifier.weight(1f).height(56.dp), height = null, shape = { PrismalCapsule() }, tint = Color.White, tintAlpha = 0.045f, blurRadius = 14.dp, refractionHeight = 10.dp, refractionAmount = 17.dp, specular = { grafGlassRim() }, contentPadding = PaddingValues(horizontal = 12.dp), horizontalArrangement = Arrangement.Start) {
+                                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                                    Box(Modifier.size(37.dp).clip(CircleShape).background(Brush.linearGradient(listOf(Color(0xFF28688A), Color(0xFF243A53)))), contentAlignment = Alignment.Center) {
+                                        Text(chat.name.take(1).uppercase(), color = Color.White, fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                                        if (chat.online) Box(Modifier.align(Alignment.BottomEnd).size(9.dp).clip(CircleShape).background(Color(0xFF48D890)).border(1.5.dp, Color(0xFF16212A), CircleShape))
                                     }
                                     Spacer(Modifier.width(10.dp))
                                     Column(Modifier.weight(1f)) {
@@ -1036,24 +1031,14 @@ private fun ChatsScreen(
                                     }
                                 }
                             }
-                            GlasmioIconButton(onClick = {}, size = 48.dp) {
-                                Box(Modifier.size(31.dp).clip(CircleShape).background(if (dark) Color(0xFF30343A) else Color(0xFFE1E6ED)), contentAlignment = Alignment.Center) {
-                                    Text(chat.name.take(1).uppercase(), color = foreground, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                        AnimatedVisibility(visible = addContactBannerVisible, enter = fadeIn(tween(160)) + androidx.compose.animation.expandVertically(), exit = fadeOut(tween(140)) + androidx.compose.animation.shrinkVertically()) {
-                            GlassSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 3.dp).height(54.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(27.dp)) {
-                                Row(Modifier.fillMaxSize().padding(start = 16.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                    Text("Добавить в контакты", color = foreground, fontSize = 14.sp, modifier = Modifier.weight(1f), textAlign = TextAlign.Center)
-                                    GlasmioIconButton(onClick = { addContactBannerVisible = false }, size = 38.dp) { GrafIcon(Icons.Rounded.Close, "Закрыть", secondary, 21.dp) }
-                                }
+                            PrismalGlassButton(onClick = { android.widget.Toast.makeText(context, "Видеозвонки появятся позже", android.widget.Toast.LENGTH_SHORT).show() }, backdrop = chatPrismalBackdrop, modifier = Modifier.size(46.dp), height = null, shape = { CircleShape }, tint = Color.White, tintAlpha = 0.055f, blurRadius = 13.dp, refractionHeight = 9.dp, refractionAmount = 15.dp, specular = { grafGlassRim() }, contentPadding = PaddingValues(0.dp), horizontalArrangement = Arrangement.Center) {
+                                GrafIcon(Icons.Rounded.Videocam, "Видеозвонок", foreground, 22.dp)
                             }
                         }
                         Spacer(Modifier.weight(1f))
                         if (replyingTo != null || pendingPhoto != null || emojiPickerOpen) {
-                            GlassSurface(modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(20.dp)) {
-                                Column(Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 8.dp)) {
+                            PrismalGlassButton(onClick = {}, backdrop = chatPrismalBackdrop, isInteractive = false, modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 3.dp), height = null, shape = { PrismalCapsule() }, tint = Color.White, tintAlpha = 0.04f, blurRadius = 12.dp, specular = { grafGlassRim() }, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 8.dp), horizontalArrangement = Arrangement.Start) {
+                                Column(Modifier.fillMaxWidth()) {
                                     if (replyingTo != null) {
                                         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                                             Column(Modifier.weight(1f)) {
@@ -1080,29 +1065,29 @@ private fun ChatsScreen(
                             }
                         }
                         Row(Modifier.fillMaxWidth().padding(start = 17.dp, end = 17.dp, bottom = 8.dp).imePadding(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
-                            GlasmioIconButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, size = 48.dp) {
+                            PrismalGlassButton(onClick = { imagePicker.launch(arrayOf("image/*")) }, backdrop = chatPrismalBackdrop, modifier = Modifier.size(48.dp), height = null, shape = { CircleShape }, tint = Color.White, tintAlpha = 0.055f, blurRadius = 13.dp, refractionHeight = 9.dp, refractionAmount = 15.dp, specular = { grafGlassRim() }, contentPadding = PaddingValues(0.dp), horizontalArrangement = Arrangement.Center) {
                                 GrafIcon(Icons.Rounded.AddPhotoAlternate, "Прикрепить", foreground, 23.dp)
                             }
-                            GlassSurface(modifier = Modifier.weight(1f).defaultMinSize(minHeight = 52.dp), shape = androidx.compose.foundation.shape.RoundedCornerShape(28.dp)) {
-                                Row(Modifier.fillMaxWidth().heightIn(min = 52.dp).padding(start = 16.dp, end = 7.dp, top = 6.dp, bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                            PrismalGlassButton(onClick = {}, backdrop = chatPrismalBackdrop, isInteractive = false, modifier = Modifier.weight(1f).defaultMinSize(minHeight = 52.dp), height = null, shape = { PrismalCapsule() }, tint = Color.White, tintAlpha = 0.05f, blurRadius = 14.dp, refractionHeight = 10.dp, refractionAmount = 17.dp, specular = { grafGlassRim() }, contentPadding = PaddingValues(start = 16.dp, end = 7.dp, top = 6.dp, bottom = 6.dp), horizontalArrangement = Arrangement.Start) {
+                                Row(Modifier.fillMaxWidth().heightIn(min = 52.dp), verticalAlignment = Alignment.CenterVertically) {
                                     Box(Modifier.weight(1f), contentAlignment = Alignment.CenterStart) {
                                         if (draft.isEmpty()) Text("Сообщение", color = secondary, fontSize = 14.sp, maxLines = 1)
                                         BasicTextField(value = draft, onValueChange = { draft = it }, modifier = Modifier.fillMaxWidth().heightIn(min = 24.dp, max = 100.dp), textStyle = TextStyle(color = foreground, fontSize = 14.sp, fontFamily = LocalTextStyle.current.fontFamily, fontWeight = LocalTextStyle.current.fontWeight, lineHeight = 19.sp), maxLines = 4, cursorBrush = SolidColor(Color(0xFF8CCBFF)))
                                     }
-                                    GlasmioIconButton(onClick = { emojiPickerOpen = !emojiPickerOpen }, size = 38.dp) { GrafSmileVector(foreground) }
+                                    PrismalGlassButton(onClick = { emojiPickerOpen = !emojiPickerOpen }, backdrop = chatPrismalBackdrop, modifier = Modifier.size(38.dp), height = null, shape = { CircleShape }, tint = Color.White, tintAlpha = 0.035f, blurRadius = 10.dp, refractionHeight = 7.dp, refractionAmount = 11.dp, specular = { grafGlassRim() }, contentPadding = PaddingValues(0.dp), horizontalArrangement = Arrangement.Center) { GrafSmileVector(foreground) }
                                 }
                             }
-                            GlasmioIconButton(onClick = {
+                            PrismalGlassButton(onClick = {
                                 if (draft.isNotBlank() || pendingPhoto != null) sendMessage(chat)
                                 else android.widget.Toast.makeText(context, "Демо-микрофон", android.widget.Toast.LENGTH_SHORT).show()
-                            }, size = 48.dp) {
+                            }, backdrop = chatPrismalBackdrop, modifier = Modifier.size(48.dp), height = null, shape = { CircleShape }, tint = Color.White, tintAlpha = 0.055f, blurRadius = 13.dp, refractionHeight = 9.dp, refractionAmount = 15.dp, specular = { grafGlassRim() }, contentPadding = PaddingValues(0.dp), horizontalArrangement = Arrangement.Center) {
                                 GrafIcon(if (draft.isNotBlank() || pendingPhoto != null) Icons.Rounded.Send else Icons.Rounded.Mic, if (draft.isNotBlank() || pendingPhoto != null) "Отправить" else "Микрофон", foreground, 23.dp)
                             }
                         }
                     }
                 }
             }
-        )
+        }
     }
 }
 
