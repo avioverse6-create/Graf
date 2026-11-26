@@ -737,6 +737,209 @@ private fun ChatsScreen(
             sampledContent = {
                 Box(Modifier.fillMaxSize()) {
                     if (activeChat != null) {
+                        // Telegram Android's MotionBackgroundDrawable default four-colour palette.
+                        // Telegram renders these generated gradient wallpapers rather than relying on a fixed bitmap.
+                        if (dark) {
+                            Box(Modifier.fillMaxSize().background(Brush.linearGradient(listOf(Color(0xFF426D57), Color(0xFFF7E48B), Color(0xFF87A284), Color(0xFFFDF6CA)))))
+                            Box(Modifier.fillMaxSize().background(Color(0xFF071018).copy(alpha = .82f)))
+                        } else {
+                            Box(Modifier.fillMaxSize().background(Color(0xFFE7EDF4)))
+                            Box(Modifier.fillMaxSize().background(Color.White.copy(alpha = .70f)))
+                        }
+                        val chat = activeChat!!
+                        val messages = messagesByChat[chat.handle].orEmpty()
+                        LazyColumn(
+                            state = messageListState,
+                            modifier = Modifier.fillMaxSize(),
+                            contentPadding = PaddingValues(start = 13.dp, end = 13.dp, top = 82.dp, bottom = 126.dp),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            items(messages, key = { it.id }) { message ->
+                                AnimatedVisibility(
+                                    visible = true,
+                                    enter = fadeIn(tween(180)) + androidx.compose.animation.slideInVertically(
+                                        initialOffsetY = { it / 3 },
+                                        animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f)
+                                    )
+                                ) {
+                                val isMine = message.outgoing
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
+                                    verticalAlignment = Alignment.Bottom
+                                ) {
+                                    Box(Modifier.widthIn(max = 318.dp)) {
+                                        Column(
+                                            Modifier
+                                                .clip(
+                                                    if (isMine) androidx.compose.foundation.shape.RoundedCornerShape(20.dp, 20.dp, 6.dp, 20.dp)
+                                                    else androidx.compose.foundation.shape.RoundedCornerShape(20.dp, 20.dp, 20.dp, 6.dp)
+                                                )
+                                                .background(if (dark) { if (isMine) Color(0xFF234F69).copy(alpha = .94f) else Color(0xFF202A35).copy(alpha = .96f) } else { if (isMine) Color(0xFFDCEEFF) else Color.White })
+                                                .border(1.dp, if (dark) Color.White.copy(alpha = .12f) else Color(0xFFD9E0E8), androidx.compose.foundation.shape.RoundedCornerShape(20.dp))
+                                                .combinedClickable(
+                                                    onClick = {},
+                                                    onLongClick = { selectedMessage = message }
+                                                )
+                                                .padding(horizontal = 12.dp, vertical = 9.dp)
+                                        ) {
+                                            if (message.replyTo != null) {
+                                                Column(
+                                                    Modifier.fillMaxWidth().padding(bottom = 6.dp)
+                                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(8.dp))
+                                                        .background(if (dark) Color.White.copy(alpha = .10f) else Color(0xFF172033).copy(alpha = .06f))
+                                                        .padding(start = 8.dp, top = 5.dp, bottom = 5.dp, end = 7.dp)
+                                                ) {
+                                                    Text("Ответ", color = Blue, fontSize = 10.sp, fontWeight = FontWeight.Bold)
+                                                    Text(message.replyTo, color = foreground.copy(alpha = .78f), fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                                }
+                                            }
+                                            if (message.photoUri != null) {
+                                                coil.compose.AsyncImage(
+                                                    model = Uri.parse(message.photoUri),
+                                                    contentDescription = "Фото в сообщении",
+                                                    contentScale = androidx.compose.ui.layout.ContentScale.Crop,
+                                                    modifier = Modifier.fillMaxWidth().heightIn(max = 210.dp).widthIn(min = 160.dp)
+                                                        .clip(androidx.compose.foundation.shape.RoundedCornerShape(13.dp))
+                                                )
+                                            }
+                                            if (message.text.isNotEmpty()) {
+                                                Text(
+                                                    message.text,
+                                                    color = foreground,
+                                                    fontSize = 14.sp,
+                                                    lineHeight = 19.sp
+                                                )
+                                            }
+                                            Row(
+                                                Modifier.align(Alignment.End).padding(top = 4.dp),
+                                                verticalAlignment = Alignment.CenterVertically
+                                            ) {
+                                                Text(message.time, color = (if (dark) Color.White else Color(0xFF344054)).copy(alpha = .62f), fontSize = 10.sp)
+                                                if (isMine) {
+                                                    Spacer(Modifier.width(4.dp))
+                                                    Text("✓✓", color = Color(0xFF9EDBFF), fontSize = 10.sp)
+                                                }
+                                            }
+                                            val reaction = reactions[message.id]
+                                            if (reaction != null) {
+                                                Text(reaction, fontSize = 13.sp, modifier = Modifier.padding(top = 3.dp))
+                                            }
+                                        }
+                                        GlasmioContextMenu(
+                                            visible = selectedMessage?.id == message.id,
+                                            itemCount = 4,
+                                            menuWidth = 236.dp,
+                                            opensAbove = true
+                                        ) { menuBackdrop ->
+                                            GlasmioMenuItem(
+                                                title = "Ответить",
+                                                systemName = "arrowshape.turn.up.left",
+                                                backdrop = menuBackdrop,
+                                                onClick = { replyingTo = message; selectedMessage = null }
+                                            )
+                                            GlasmioMenuItem(
+                                                title = "Копировать",
+                                                systemName = "doc.on.doc",
+                                                backdrop = menuBackdrop,
+                                                onClick = {
+                                                    val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                                    clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Graf", message.text))
+                                                    selectedMessage = null
+                                                }
+                                            )
+                                            GlasmioMenuItem(
+                                                title = "Поставить ❤️",
+                                                systemName = "heart",
+                                                backdrop = menuBackdrop,
+                                                onClick = { reactions = reactions + (message.id to "❤️"); selectedMessage = null }
+                                            )
+                                            GlasmioMenuItem(
+                                                title = "Удалить у меня",
+                                                systemName = "trash",
+                                                destructive = true,
+                                                backdrop = menuBackdrop,
+                                                onClick = {
+                                                    messagesByChat = messagesByChat + (chat.handle to messagesByChat[chat.handle].orEmpty().filterNot { it.id == message.id })
+                                                    selectedMessage = null
+                                                }
+                                            )
+                                        }
+                                    }
+                                }
+                                }
+                            }
+                        }
+                    } else {
+                        Box(Modifier.fillMaxSize().background(if (dark) Color(0xFF050608) else Color(0xFFF5F7FA)))
+                        if (mode == "Chats") {
+                            LazyColumn(
+                                state = chatListState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(top = 12.dp, bottom = 104.dp),
+                                verticalArrangement = Arrangement.spacedBy(1.dp)
+                            ) {
+                                items(chats, key = { it.handle }) { chat ->
+                                    val last = messagesByChat[chat.handle].orEmpty().lastOrNull()
+                                    Row(
+                                        Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 13.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(
+                                            Modifier.size(56.dp).clip(CircleShape)
+                                                .background(Brush.linearGradient(listOf(Color(0xFF305C77), Color(0xFF263746)))),
+                                            contentAlignment = Alignment.Center
+                                        ) {
+                                            Text(chat.name.take(1).uppercase(), color = Color.White, fontSize = 20.sp, fontWeight = FontWeight.Bold)
+                                            if (chat.online) Box(
+                                                Modifier.align(Alignment.BottomEnd).padding(2.dp).size(12.dp).clip(CircleShape)
+                                                    .background(Color(0xFF4DD58A)).border(2.dp, if (dark) Color(0xFF080B10) else Color.White, CircleShape)
+                                            )
+                                        }
+                                        Spacer(Modifier.width(13.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Text(chat.name, color = foreground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(last?.text?.ifBlank { "Фото" } ?: chat.preview, color = secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(top = 4.dp))
+                                        }
+                                        Column(horizontalAlignment = Alignment.End) {
+                                            Text(last?.time ?: chat.time, color = secondary, fontSize = 10.sp)
+                                            if (chat.unread > 0) Box(
+                                                Modifier.padding(top = 6.dp).clip(CircleShape).background(Blue).padding(horizontal = 7.dp, vertical = 3.dp)
+                                            ) { Text(chat.unread.toString(), color = Color.White, fontSize = 10.sp, fontWeight = FontWeight.Bold) }
+                                        }
+                                    }
+                                    Box(Modifier.fillMaxWidth().padding(start = 86.dp).height(.6.dp).background(if (dark) Color.White.copy(alpha = .08f) else Color(0xFFE1E6ED)))
+                                }
+                            }
+                        } else {
+                            LazyColumn(
+                                state = chatListState,
+                                modifier = Modifier.fillMaxSize(),
+                                contentPadding = PaddingValues(top = 12.dp, bottom = 104.dp)
+                            ) {
+                                items(contacts, key = { it.handle }) { contact ->
+                                    Row(
+                                        Modifier.fillMaxWidth().padding(horizontal = 18.dp, vertical = 13.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Box(Modifier.size(50.dp).clip(CircleShape).background(if (dark) Color(0xFF283642) else Color(0xFFE4EAF1)), contentAlignment = Alignment.Center) {
+                                            Text(contact.name.take(1), color = foreground, fontSize = 18.sp, fontWeight = FontWeight.Bold)
+                                        }
+                                        Spacer(Modifier.width(12.dp))
+                                        Column(Modifier.weight(1f)) {
+                                            Text(contact.name, color = foreground, fontSize = 15.sp, fontWeight = FontWeight.SemiBold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                            Text(contact.preview, color = secondary, fontSize = 12.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                                        }
+                                        Text("Контакт", color = secondary, fontSize = 11.sp, maxLines = 1)
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            },
+            overlayContent = {
+                if (activeChat != null) {
                     val chat = activeChat!!
                     Column(Modifier.fillMaxSize()) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 17.dp, vertical = 7.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
