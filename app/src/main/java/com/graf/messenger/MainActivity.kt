@@ -874,7 +874,7 @@ private fun ChatsScreen(
                             state = messageListState,
                             modifier = Modifier.fillMaxSize(),
                             contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 76.dp, bottom = 116.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                            verticalArrangement = Arrangement.spacedBy(6.dp)
                         ) {
                             items(messages, key = { it.id }) { message ->
                                 AnimatedVisibility(
@@ -890,7 +890,7 @@ private fun ChatsScreen(
                                     horizontalArrangement = if (isMine) Arrangement.End else Arrangement.Start,
                                     verticalAlignment = Alignment.Bottom
                                 ) {
-                                    Box(Modifier.widthIn(max = 318.dp)) {
+                                    Box(Modifier.widthIn(max = 300.dp)) {
                                         Column(
                                             Modifier
                                                 .clip(
@@ -903,7 +903,7 @@ private fun ChatsScreen(
                                                     onClick = {},
                                                     onLongClick = { selectedMessage = message }
                                                 )
-                                                .padding(horizontal = 12.dp, vertical = 9.dp)
+                                                .padding(horizontal = 11.dp, vertical = 8.dp)
                                         ) {
                                             if (message.replyTo != null) {
                                                 Column(
@@ -929,8 +929,8 @@ private fun ChatsScreen(
                                                 Text(
                                                     message.text,
                                                     color = foreground,
-                                                    fontSize = 14.sp,
-                                                    lineHeight = 19.sp
+                                                    fontSize = 13.5.sp,
+                                                    lineHeight = 18.sp
                                                 )
                                             }
                                             Row(
@@ -1093,7 +1093,7 @@ private fun ChatsScreen(
                                                 Text("Ответ для сообщения", color = Color(0xFF8CCBFF), fontSize = 11.sp, fontWeight = FontWeight.Bold)
                                                 Text(replyingTo!!.text.ifBlank { "Фото" }, color = secondary, fontSize = 11.sp, maxLines = 1, overflow = TextOverflow.Ellipsis)
                                             }
-                                            GlasmioIconButton(onClick = { replyingTo = null }, size = 30.dp) { GrafIcon(Icons.Rounded.Close, "Отменить ответ", secondary, 16.dp) }
+                                            PrismalGlassButton(onClick = { replyingTo = null }, backdrop = chatPrismalBackdrop, modifier = Modifier.size(30.dp), height = null, shape = { CircleShape }, tint = Color.White, tintAlpha = 0.04f, blurRadius = 8.dp, specular = { grafGlassRim() }, contentPadding = PaddingValues(0.dp), horizontalArrangement = Arrangement.Center) { GrafIcon(Icons.Rounded.Close, "Отменить ответ", secondary, 15.dp) }
                                         }
                                     }
                                     if (pendingPhoto != null) {
@@ -1101,7 +1101,7 @@ private fun ChatsScreen(
                                             coil.compose.AsyncImage(model = pendingPhoto, contentDescription = "Выбранное фото", contentScale = androidx.compose.ui.layout.ContentScale.Crop, modifier = Modifier.size(48.dp).clip(androidx.compose.foundation.shape.RoundedCornerShape(9.dp)))
                                             Spacer(Modifier.width(8.dp))
                                             Text("Фото готово к отправке", color = secondary, fontSize = 11.sp, modifier = Modifier.weight(1f))
-                                            GlasmioIconButton(onClick = { pendingPhoto = null }, size = 30.dp) { GrafIcon(Icons.Rounded.Close, "Убрать фото", secondary, 16.dp) }
+                                            PrismalGlassButton(onClick = { pendingPhoto = null }, backdrop = chatPrismalBackdrop, modifier = Modifier.size(30.dp), height = null, shape = { CircleShape }, tint = Color.White, tintAlpha = 0.04f, blurRadius = 8.dp, specular = { grafGlassRim() }, contentPadding = PaddingValues(0.dp), horizontalArrangement = Arrangement.Center) { GrafIcon(Icons.Rounded.Close, "Убрать фото", secondary, 15.dp) }
                                         }
                                     }
                                     if (emojiPickerOpen) {
