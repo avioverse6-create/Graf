@@ -1043,7 +1043,6 @@ private fun ChatsScreen(
                         }
                     }
                 }
-        }
         AnimatedContent(
             targetState = activeChat,
             transitionSpec = {
