@@ -56,6 +56,8 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.togetherWith
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.LinearEasing
 import androidx.compose.ui.graphics.graphicsLayer
@@ -443,6 +445,17 @@ private fun GrafApp() {
     }
 }
 
+private fun playGrafMessageTone(incoming: Boolean) {
+    runCatching {
+        val tone = ToneGenerator(AudioManager.STREAM_NOTIFICATION, 30)
+        tone.startTone(
+            if (incoming) ToneGenerator.TONE_PROP_ACK else ToneGenerator.TONE_PROP_BEEP,
+            72
+        )
+        Handler(Looper.getMainLooper()).postDelayed({ tone.release() }, 180L)
+    }
+}
+
 @Composable
 private fun ChatWallpaperPattern(modifier: Modifier = Modifier, dark: Boolean) {
     Canvas(modifier) {
@@ -539,10 +552,37 @@ private fun GrafSettingsCog(active: Boolean, tint: Color) {
 private fun RowScope.GrafBottomTab(index: Int, tab: GrafTab, selected: Int, dark: Boolean, onClick: () -> Unit) {
     val highlighted = LocalPrismalBottomTabHighlightedIndex.current()
     val active = if (highlighted >= 0) highlighted == index else selected == index
+    val iconMotion by animateFloatAsState(
+        targetValue = if (active) 1f else 0f,
+        animationSpec = tween(durationMillis = 260, easing = FastOutSlowInEasing),
+        label = "graf-tab-icon-$index"
+    )
     PrismalGlassBottomTab(onClick = onClick) {
         val tabTint = if (active) Blue else if (dark) Color(0xFFE5ECF5) else Color(0xFF303744)
         if (tab == GrafTab.Settings) GrafSettingsCog(active, tabTint)
-        else Box(Modifier.size(28.dp), contentAlignment = Alignment.Center) {
+        else Box(
+            Modifier.size(28.dp).graphicsLayer {
+                when (tab) {
+                    GrafTab.Chats -> {
+                        scaleX = 1f + 0.11f * iconMotion
+                        scaleY = 1f + 0.08f * iconMotion
+                        translationY = -1.5.dp.toPx() * iconMotion
+                    }
+                    GrafTab.Contacts -> {
+                        rotationZ = -5.5f * iconMotion
+                        scaleX = 1f + 0.06f * iconMotion
+                        scaleY = 1f + 0.06f * iconMotion
+                    }
+                    GrafTab.Profile -> {
+                        translationY = -2.5.dp.toPx() * iconMotion
+                        scaleX = 1f + 0.07f * iconMotion
+                        scaleY = 1f + 0.07f * iconMotion
+                    }
+                    GrafTab.Settings -> Unit
+                }
+            },
+            contentAlignment = Alignment.Center
+        ) {
             GrafIcon(tab.icon, tab.title, tabTint, 22.dp)
         }
         BoxWithConstraints(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
@@ -841,7 +881,7 @@ private fun ChatsScreen(
                                     visible = true,
                                     enter = fadeIn(tween(180)) + androidx.compose.animation.slideInVertically(
                                         initialOffsetY = { it / 3 },
-                                        animationSpec = spring(dampingRatio = 0.82f, stiffness = 520f)
+                                        animationSpec = tween(220, easing = FastOutSlowInEasing)
                                     )
                                 ) {
                                 val isMine = message.outgoing
@@ -1004,8 +1044,16 @@ private fun ChatsScreen(
                     }
                 }
         }
-        if (activeChat != null) {
-                    val chat = activeChat!!
+        AnimatedContent(
+            targetState = activeChat,
+            transitionSpec = {
+                (fadeIn(tween(230, easing = FastOutSlowInEasing)) + androidx.compose.animation.slideInHorizontally(initialOffsetX = { it / 10 }, animationSpec = tween(230, easing = FastOutSlowInEasing))) togetherWith
+                    (fadeOut(tween(150)) + androidx.compose.animation.slideOutHorizontally(targetOffsetX = { -it / 12 }, animationSpec = tween(150)))
+            },
+            label = "graf-chat-navigation"
+        ) { animatedChat ->
+            if (animatedChat != null) {
+                    val chat = animatedChat
                     Column(Modifier.fillMaxSize()) {
                         Row(Modifier.fillMaxWidth().padding(horizontal = 15.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp)) {
                             PrismalGlassButton(onClick = {
@@ -1086,6 +1134,7 @@ private fun ChatsScreen(
                         }
                     }
                 }
+            }
             }
         }
     }
